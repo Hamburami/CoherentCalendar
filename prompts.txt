@@ -1,0 +1,5 @@
+Initial Prompt - Harrison 2/3 7:15pm:
+
+We want to create a simple website that displays a monthly calendar, and have that calendar display events that are read from an SQL file. 
+Each event should have a date, time, and location, as well as optional parameters such as a description or a url. 
+I want to keep the code we make as readable and maintainable as possible, so include an overview of all your edits and instructions on how to interpret the code in a separate text file

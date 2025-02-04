@@ -1,0 +1,25 @@
+OmniCalender Project Structure
+
+/OmniCalender
+├── static/
+│   ├── css/
+│   │   └── styles.css         # Main stylesheet for the calendar
+│   └── js/
+│       └── calendar.js        # Calendar functionality and event handling
+├── templates/
+│   └── index.html            # Main calendar view template
+├── database/
+│   ├── schema.sql            # SQL schema for events table
+│   └── database.db           # SQLite database file
+├── app.py                    # Main Flask application
+└── README.md                 # Project documentation
+
+Database Schema:
+events
+- id (INTEGER PRIMARY KEY)
+- title (TEXT NOT NULL)
+- date (DATE NOT NULL)
+- time (TIME)
+- location (TEXT)
+- description (TEXT)
+- url (TEXT)

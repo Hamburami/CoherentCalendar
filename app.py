@@ -1,0 +1,77 @@
+from flask import Flask, render_template, jsonify, send_from_directory
+import sqlite3
+from datetime import datetime
+import os
+
+app = Flask(__name__, static_url_path='', static_folder='static')
+
+def init_db():
+    db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            date DATE NOT NULL,
+            time TIME,
+            location TEXT,
+            description TEXT,
+            url TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def get_db():
+    db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+@app.route('/')
+def index():
+    app.logger.info('Serving index.html')
+    return render_template('index.html')
+
+@app.route('/static/<path:path>')
+def serve_static(path):
+    app.logger.info(f'Serving static file: {path}')
+    return send_from_directory('static', path)
+
+@app.route('/api/events/<int:year>/<int:month>')
+def get_events(year, month):
+    start_date = f"{year}-{month:02d}-01"
+    if month == 12:
+        end_date = f"{year + 1}-01-01"
+    else:
+        end_date = f"{year}-{month + 1:02d}-01"
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "SELECT * FROM events WHERE date >= ? AND date < ?",
+        (start_date, end_date)
+    )
+    
+    events = []
+    for row in cursor.fetchall():
+        events.append({
+            'id': row['id'],
+            'title': row['title'],
+            'date': row['date'],
+            'time': row['time'],
+            'location': row['location'],
+            'description': row['description'],
+            'url': row['url']
+        })
+    
+    conn.close()
+    return jsonify(events)
+
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True, port=8000)

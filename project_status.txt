@@ -1,4 +1,4 @@
-OMNICALENDER STATUS
+COHERENTCALENDER STATUS
 
 FILES
 app.py              Flask backend, SQLite integration
@@ -32,7 +32,7 @@ FEATURES
 ✓ Admin Mode
   • Password: 'future'
   • Edit/Delete access
-  • Visual indicators
+  • Visual indicators, color scheme is red
 
 API
 GET  /api/events/<year>/<month>
@@ -41,9 +41,9 @@ PUT  /api/events/<id>
 DEL  /api/events/<id>
 
 STATUS: All features implemented, no known issues
-OmniCalender Project Structure
+CoherentCalendar Project Structure
 
-/OmniCalender
+/CoherentCalendar
 ├── static/
 │   ├── css/
 │   │   └── styles.css         # Main stylesheet for the calendar

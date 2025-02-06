@@ -16,13 +16,20 @@ class Calendar {
         this.eventContent = document.getElementById('event-content');
         this.overlay = document.getElementById('overlay');
         this.closeButton = document.getElementById('close-button');
+        this.addEventBtn = document.getElementById('addEventBtn');
+        this.addEventModal = document.getElementById('add-event-modal');
+        this.closeModalButton = document.getElementById('close-modal-button');
+        this.addEventForm = document.getElementById('add-event-form');
     }
 
     setupEventListeners() {
         this.prevMonthButton.addEventListener('click', () => this.changeMonth(-1));
         this.nextMonthButton.addEventListener('click', () => this.changeMonth(1));
-        this.overlay.addEventListener('click', () => this.hideEventDetails());
+        this.overlay.addEventListener('click', () => this.hideAllModals());
         this.closeButton.addEventListener('click', () => this.hideEventDetails());
+        this.addEventBtn.addEventListener('click', () => this.showAddEventModal());
+        this.closeModalButton.addEventListener('click', () => this.hideAddEventModal());
+        this.addEventForm.addEventListener('submit', (e) => this.handleAddEvent(e));
     }
 
     async fetchEvents() {
@@ -121,6 +128,58 @@ class Calendar {
     hideEventDetails() {
         this.overlay.classList.add('hidden');
         this.eventDetails.classList.add('hidden');
+    }
+
+    showAddEventModal() {
+        this.overlay.classList.remove('hidden');
+        this.addEventModal.classList.remove('hidden');
+        // Set default date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('event-date').value = today;
+    }
+
+    hideAddEventModal() {
+        this.overlay.classList.add('hidden');
+        this.addEventModal.classList.add('hidden');
+        this.addEventForm.reset();
+    }
+
+    hideAllModals() {
+        this.hideEventDetails();
+        this.hideAddEventModal();
+    }
+
+    async handleAddEvent(e) {
+        e.preventDefault();
+        
+        const formData = {
+            title: document.getElementById('event-title').value,
+            date: document.getElementById('event-date').value,
+            time: document.getElementById('event-time').value || null,
+            location: document.getElementById('event-location').value || null,
+            description: document.getElementById('event-description').value || null
+        };
+
+        try {
+            const response = await fetch('/api/events', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Hide the modal and refresh the calendar
+            this.hideAddEventModal();
+            await this.renderCalendar();
+        } catch (error) {
+            console.error('Error adding event:', error);
+            alert('Failed to add event. Please try again.');
+        }
     }
 
     changeMonth(delta) {

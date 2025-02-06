@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, send_from_directory
+from flask import Flask, render_template, jsonify, send_from_directory, request
 import sqlite3
 from datetime import datetime
 import os
@@ -71,6 +71,51 @@ def get_events(year, month):
     
     conn.close()
     return jsonify(events)
+
+@app.route('/api/events', methods=['POST'])
+def add_event():
+    data = request.json
+    
+    # Validate required fields
+    if not data.get('title') or not data.get('date'):
+        return jsonify({'error': 'Title and date are required'}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+            INSERT INTO events (title, date, time, location, description)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            data['title'],
+            data['date'],
+            data.get('time'),
+            data.get('location'),
+            data.get('description')
+        ))
+        
+        conn.commit()
+        new_event_id = cursor.lastrowid
+        
+        # Fetch the newly created event
+        cursor.execute('SELECT * FROM events WHERE id = ?', (new_event_id,))
+        event = cursor.fetchone()
+        
+        conn.close()
+        
+        return jsonify({
+            'id': event['id'],
+            'title': event['title'],
+            'date': event['date'],
+            'time': event['time'],
+            'location': event['location'],
+            'description': event['description']
+        }), 201
+        
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     init_db()

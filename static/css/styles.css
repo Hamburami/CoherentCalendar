@@ -35,6 +35,17 @@ header {
     align-items: center;
     gap: 1rem;
     margin: 1rem 0;
+    position: relative;
+}
+
+.add-event-btn {
+    position: absolute;
+    left: 0;
+    background-color: var(--primary-color);
+}
+
+.add-event-btn:hover {
+    background-color: #34495e;
 }
 
 button {
@@ -172,4 +183,68 @@ button:hover {
 
 .close-button:hover {
     color: var(--secondary-color);
+}
+
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 20;
+    width: 90%;
+    max-width: 500px;
+}
+
+.modal-content {
+    position: relative;
+}
+
+.modal h3 {
+    margin-bottom: 1.5rem;
+    color: var(--primary-color);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-group textarea {
+    height: 100px;
+    resize: vertical;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 1rem;
+}
+
+.submit-btn:hover {
+    background-color: #34495e;
 }

@@ -11,6 +11,7 @@
         <header>
             <h1>Coherent Calendar</h1>
             <div class="calendar-controls">
+                <button id="addEventBtn" class="add-event-btn">Add Event</button>
                 <button id="prevMonth">&lt;</button>
                 <h2 id="currentMonth"></h2>
                 <button id="nextMonth">&gt;</button>
@@ -33,6 +34,36 @@
         <div id="event-details" class="event-details hidden">
             <button id="close-button" class="close-button">&times;</button>
             <div id="event-content"></div>
+        </div>
+
+        <div id="add-event-modal" class="modal hidden">
+            <div class="modal-content">
+                <button id="close-modal-button" class="close-button">&times;</button>
+                <h3>Add New Event</h3>
+                <form id="add-event-form">
+                    <div class="form-group">
+                        <label for="event-title">Event Name*</label>
+                        <input type="text" id="event-title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-date">Date*</label>
+                        <input type="date" id="event-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-time">Time</label>
+                        <input type="time" id="event-time">
+                    </div>
+                    <div class="form-group">
+                        <label for="event-location">Location</label>
+                        <input type="text" id="event-location">
+                    </div>
+                    <div class="form-group">
+                        <label for="event-description">Description</label>
+                        <textarea id="event-description"></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">Add Event</button>
+                </form>
+            </div>
         </div>
         <div id="overlay" class="overlay hidden"></div>
     </div>

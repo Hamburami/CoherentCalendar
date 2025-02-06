@@ -28,6 +28,9 @@ class Calendar {
     async fetchEvents() {
         try {
             const response = await fetch(`/api/events/${this.currentDate.getFullYear()}/${this.currentDate.getMonth() + 1}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             this.events = await response.json();
         } catch (error) {
             console.error('Error fetching events:', error);
@@ -58,7 +61,7 @@ class Calendar {
         const month = this.currentDate.getMonth();
         
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                          'July', 'August', 'September', 'October', 'November', 'December'];
+                            'July', 'August', 'September', 'October', 'November', 'December'];
         this.currentMonthElement.textContent = `${monthNames[month]} ${year}`;
 
         this.calendarGrid.innerHTML = '';

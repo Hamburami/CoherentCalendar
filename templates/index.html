@@ -31,8 +31,10 @@
         </div>
 
         <div id="event-details" class="event-details hidden">
+            <button id="close-button" class="close-button">&times;</button>
             <div id="event-content"></div>
         </div>
+        <div id="overlay" class="overlay hidden"></div>
     </div>
 
     <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>

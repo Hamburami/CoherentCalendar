@@ -8,3 +8,9 @@ I want to keep the code we make as readable and maintainable as possible, so inc
 Adding an "Add Event" button - Harrison 2/5 10:05pm:
 
 "Let's add a way to add a new event to the calender, I'd like a button in the top left corner that says "Add Event", when that button is pressed a pop up appears with some input fields for Event Name, Date, Time, Location and description, at the bottom of the pop up is a button that says "Add Event". When that button is pressed, the event needs to be added to the sqlite data base. Feel free to take a look a the project to see how things currently work before aproaching this project"
+
+
+Implementing Admin functionality - Harrison 2/5 10:45pm:
+
+"Put a button in the top top right corner that says "Admin Access". When the button is pressed it should prompt for a password, the admin password is "future" (Briefly explain how you implemented the password checking feature and how to update the password in the future) If the password is implemented correctly the website enters admin mode and the color scheme should change to a red hue. 
+When in admin mode, the user can click on events and has an option to delete them which updates the databse accordingly.

@@ -1,0 +1,68 @@
+OMNICALENDER STATUS
+
+FILES
+app.py              Flask backend, SQLite integration
+index.html          Calendar view template
+calendar.js         Calendar logic, event handling
+styles.css          Calendar styling
+
+DATABASE (SQLite)
+events
+├── id          INTEGER PRIMARY KEY
+├── title       TEXT NOT NULL
+├── date        DATE NOT NULL
+├── time        TIME
+├── location    TEXT
+├── description TEXT
+└── url         TEXT
+
+FEATURES
+✓ Calendar
+  • Month grid with navigation
+  • Fixed 120px cell height
+  • Scrollable event containers
+  • Event overflow handling
+
+✓ Events
+  • Add/Edit/Delete
+  • Date format: YYYY-MM-DD (storage), M/D/YYYY (display)
+  • Modal detail view
+  • No delete confirmation
+
+✓ Admin Mode
+  • Password: 'future'
+  • Edit/Delete access
+  • Visual indicators
+
+API
+GET  /api/events/<year>/<month>
+POST /api/events
+PUT  /api/events/<id>
+DEL  /api/events/<id>
+
+STATUS: All features implemented, no known issues
+OmniCalender Project Structure
+
+/OmniCalender
+├── static/
+│   ├── css/
+│   │   └── styles.css         # Main stylesheet for the calendar
+│   └── js/
+│       └── calendar.js        # Calendar functionality and event handling
+├── templates/
+│   └── index.html            # Main calendar view template
+├── database/
+│   ├── schema.sql            # SQL schema for events table
+│   └── database.db           # SQLite database file
+├── app.py                    # Main Flask application
+└── README.md                 # Project documentation
+
+Database Schema:
+events
+- id (INTEGER PRIMARY KEY)
+- title (TEXT NOT NULL)
+- date (DATE NOT NULL)
+- time (TIME)
+- location (TEXT)
+- description (TEXT)
+- url (TEXT)

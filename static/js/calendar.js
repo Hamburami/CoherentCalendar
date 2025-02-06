@@ -4,6 +4,7 @@ class Calendar {
         this.events = [];
         this.isAdmin = false;
         this.editingEventId = null;
+        this.activePopup = null;
         this.initializeElements();
         this.setupEventListeners();
         this.renderCalendar();
@@ -39,6 +40,12 @@ class Calendar {
         this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
         this.closeAdminModal.addEventListener('click', () => this.hideAdminModal());
         this.adminForm.addEventListener('submit', (e) => this.handleAdminLogin(e));
+        // Add click listener to close popups when clicking outside
+        document.addEventListener('click', (e) => {
+            if (this.activePopup && !e.target.closest('.events-popup') && !e.target.closest('.more-events')) {
+                this.hideEventPopup();
+            }
+        });
     }
 
     async fetchEvents() {
@@ -95,17 +102,7 @@ class Calendar {
             const dateStr = this.formatDate(year, month + 1, day);
             const dayEvents = this.events.filter(event => event.date === dateStr);
             
-            if (dayEvents.length > 0) {
-                const eventsContainer = dayElement.querySelector('.events-container');
-                dayEvents.forEach(event => {
-                    const eventElement = document.createElement('div');
-                    eventElement.className = 'event';
-                    eventElement.textContent = event.title;
-                    eventElement.title = `${event.title}${event.time ? ` - ${event.time}` : ''}`;
-                    eventElement.addEventListener('click', () => this.showEventDetails(event));
-                    eventsContainer.appendChild(eventElement);
-                });
-            }
+            this.renderEvents(dayElement, dayEvents);
             
             this.calendarGrid.appendChild(dayElement);
         }
@@ -156,7 +153,7 @@ class Calendar {
 
     exitAdminMode() {
         this.isAdmin = false;
-        document.documentElement.removeAttribute('data-admin-mode');
+        document.documentElement.setAttribute('data-admin-mode', 'false');
         this.adminAccessBtn.textContent = 'Admin Access';
         this.hideAdminModal();
         this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
@@ -331,6 +328,76 @@ class Calendar {
                 alert('Failed to update event. Please try again.');
             }
         }, { once: true });
+    }
+
+    hideEventPopup() {
+        if (this.activePopup) {
+            this.activePopup.remove();
+            this.activePopup = null;
+        }
+    }
+
+    showEventPopup(events, anchorElement) {
+        this.hideEventPopup();
+
+        const popup = document.createElement('div');
+        popup.className = 'events-popup';
+        
+        events.forEach(event => {
+            const eventElement = document.createElement('div');
+            eventElement.className = 'event';
+            eventElement.textContent = event.title;
+            eventElement.addEventListener('click', () => this.showEventDetails(event));
+            if (this.isAdmin) {
+                eventElement.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    this.editEvent(event);
+                });
+            }
+            popup.appendChild(eventElement);
+        });
+
+        // Position the popup relative to the anchor element
+        const rect = anchorElement.getBoundingClientRect();
+        popup.style.left = `${rect.left}px`;
+        popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
+
+        document.body.appendChild(popup);
+        this.activePopup = popup;
+    }
+
+    renderEvents(dayElement, dayEvents) {
+        const eventsContainer = dayElement.querySelector('.events-container');
+        eventsContainer.innerHTML = '';
+
+        const maxVisibleEvents = 3;
+        const visibleEvents = dayEvents.slice(0, maxVisibleEvents);
+        const remainingEvents = dayEvents.slice(maxVisibleEvents);
+
+        visibleEvents.forEach(event => {
+            const eventElement = document.createElement('div');
+            eventElement.className = 'event';
+            eventElement.textContent = event.title;
+            eventElement.addEventListener('click', () => this.showEventDetails(event));
+            if (this.isAdmin) {
+                eventElement.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    this.editEvent(event);
+                });
+            }
+            eventsContainer.appendChild(eventElement);
+        });
+
+        if (remainingEvents.length > 0) {
+            const moreEventsElement = document.createElement('div');
+            moreEventsElement.className = 'more-events';
+            moreEventsElement.textContent = `+ ${remainingEvents.length} more`;
+            moreEventsElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showEventPopup(remainingEvents, moreEventsElement);
+            });
+            eventsContainer.appendChild(moreEventsElement);
+        }
     }
 
     changeMonth(delta) {

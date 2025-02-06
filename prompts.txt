@@ -1,5 +1,10 @@
 Initial Prompt - Harrison 2/3 7:15pm:
 
-We want to create a simple website that displays a monthly calendar, and have that calendar display events that are read from an SQL file. 
+"We want to create a simple website that displays a monthly calendar, and have that calendar display events that are read from an SQL file. 
 Each event should have a date, time, and location, as well as optional parameters such as a description or a url. 
-I want to keep the code we make as readable and maintainable as possible, so include an overview of all your edits and instructions on how to interpret the code in a separate text file
+I want to keep the code we make as readable and maintainable as possible, so include an overview of all your edits and instructions on how to interpret the code in a separate text file"
+
+
+Adding an "Add Event" button - Harrison 2/5 10:05pm:
+
+"Let's add a way to add a new event to the calender, I'd like a button in the top left corner that says "Add Event", when that button is pressed a pop up appears with some input fields for Event Name, Date, Time, Location and description, at the bottom of the pop up is a button that says "Add Event". When that button is pressed, the event needs to be added to the sqlite data base. Feel free to take a look a the project to see how things currently work before aproaching this project"

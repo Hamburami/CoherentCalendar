@@ -117,6 +117,82 @@ def add_event():
         conn.close()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/events/<int:event_id>', methods=['DELETE'])
+def delete_event(event_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if event exists
+        cursor.execute('SELECT * FROM events WHERE id = ?', (event_id,))
+        event = cursor.fetchone()
+        
+        if not event:
+            conn.close()
+            return jsonify({'error': 'Event not found'}), 404
+        
+        # Delete the event
+        cursor.execute('DELETE FROM events WHERE id = ?', (event_id,))
+        conn.commit()
+        conn.close()
+        
+        return '', 204
+        
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/events/<int:event_id>', methods=['PUT'])
+def update_event(event_id):
+    data = request.json
+    
+    if not data.get('title') or not data.get('date'):
+        return jsonify({'error': 'Title and date are required'}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT * FROM events WHERE id = ?', (event_id,))
+        event = cursor.fetchone()
+        
+        if not event:
+            conn.close()
+            return jsonify({'error': 'Event not found'}), 404
+        
+        cursor.execute('''
+            UPDATE events 
+            SET title = ?, date = ?, time = ?, location = ?, description = ?
+            WHERE id = ?
+        ''', (
+            data['title'],
+            data['date'],
+            data.get('time'),
+            data.get('location'),
+            data.get('description'),
+            event_id
+        ))
+        
+        conn.commit()
+        
+        cursor.execute('SELECT * FROM events WHERE id = ?', (event_id,))
+        updated_event = cursor.fetchone()
+        
+        conn.close()
+        
+        return jsonify({
+            'id': updated_event['id'],
+            'title': updated_event['title'],
+            'date': updated_event['date'],
+            'time': updated_event['time'],
+            'location': updated_event['location'],
+            'description': updated_event['description']
+        })
+        
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, port=8000)

@@ -6,6 +6,15 @@
     --border-color: #dcdde1;
 }
 
+/* Admin mode colors */
+:root[data-admin-mode="true"] {
+    --primary-color: #c0392b;
+    --secondary-color: #e74c3c;
+    --background-color: #fff5f5;
+    --text-color: #c0392b;
+    --border-color: #ffcdd2;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -46,6 +55,21 @@ header {
 
 .add-event-btn:hover {
     background-color: #34495e;
+}
+
+.admin-btn {
+    position: absolute;
+    right: -20px;
+    top: -40px;
+    background-color: var(--primary-color);
+}
+
+.admin-btn:hover {
+    background-color: #34495e;
+}
+
+[data-admin-mode="true"] .admin-btn {
+    background-color: var(--secondary-color);
 }
 
 button {
@@ -247,4 +271,23 @@ button:hover {
 
 .submit-btn:hover {
     background-color: #34495e;
+}
+
+.delete-event-btn, .edit-event-btn {
+    background-color: #e74c3c;
+    margin-top: 1rem;
+    width: 100%;
+}
+
+.delete-event-btn:hover, .edit-event-btn:hover {
+    background-color: #c0392b;
+}
+
+.edit-event-btn {
+    background-color: var(--primary-color);
+    margin-top: 0.5rem;
+}
+
+.edit-event-btn:hover {
+    background-color: var(--secondary-color);
 }

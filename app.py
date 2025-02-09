@@ -7,21 +7,18 @@ app = Flask(__name__, static_url_path='', static_folder='static')
 
 def init_db():
     db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
+    schema_path = os.path.join(os.path.dirname(__file__), 'database', 'schema.sql')
+    
+    # Ensure database directory exists
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     
+    # Read schema from file
+    with open(schema_path, 'r') as f:
+        schema = f.read()
+    
+    # Initialize database with schema
     conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            date DATE NOT NULL,
-            time TIME,
-            location TEXT,
-            description TEXT,
-            url TEXT
-        )
-    ''')
+    conn.executescript(schema)
     conn.commit()
     conn.close()
 
@@ -52,10 +49,18 @@ def get_events(year, month):
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute(
-        "SELECT * FROM events WHERE date >= ? AND date < ?",
-        (start_date, end_date)
-    )
+    is_admin = request.args.get('admin', 'false').lower() == 'true'
+    
+    if is_admin:
+        cursor.execute(
+            "SELECT * FROM events WHERE date >= ? AND date < ?",
+            (start_date, end_date)
+        )
+    else:
+        cursor.execute(
+            "SELECT * FROM events WHERE date >= ? AND date < ? AND needs_review = 0",
+            (start_date, end_date)
+        )
     
     events = []
     for row in cursor.fetchall():
@@ -66,7 +71,8 @@ def get_events(year, month):
             'time': row['time'],
             'location': row['location'],
             'description': row['description'],
-            'url': row['url']
+            'url': row['url'],
+            'needs_review': bool(row['needs_review'])
         })
     
     conn.close()
@@ -85,14 +91,16 @@ def add_event():
     
     try:
         cursor.execute('''
-            INSERT INTO events (title, date, time, location, description)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO events (title, date, time, location, description, url, needs_review)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (
             data['title'],
             data['date'],
-            data.get('time'),
-            data.get('location'),
-            data.get('description')
+            data.get('time', ''),
+            data.get('location', ''),
+            data.get('description', ''),
+            data.get('url', ''),
+            1
         ))
         
         conn.commit()
@@ -110,11 +118,14 @@ def add_event():
             'date': event['date'],
             'time': event['time'],
             'location': event['location'],
-            'description': event['description']
+            'description': event['description'],
+            'url': event['url'],
+            'needs_review': bool(event['needs_review'])
         }), 201
         
     except Exception as e:
         conn.close()
+        print('Error adding event:', str(e))  
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/events/<int:event_id>', methods=['DELETE'])
@@ -153,6 +164,7 @@ def update_event(event_id):
     cursor = conn.cursor()
     
     try:
+        # Get the current event to preserve its needs_review status
         cursor.execute('SELECT * FROM events WHERE id = ?', (event_id,))
         event = cursor.fetchone()
         
@@ -162,7 +174,7 @@ def update_event(event_id):
         
         cursor.execute('''
             UPDATE events 
-            SET title = ?, date = ?, time = ?, location = ?, description = ?
+            SET title = ?, date = ?, time = ?, location = ?, description = ?, url = ?
             WHERE id = ?
         ''', (
             data['title'],
@@ -170,6 +182,7 @@ def update_event(event_id):
             data.get('time'),
             data.get('location'),
             data.get('description'),
+            data.get('url'),
             event_id
         ))
         
@@ -186,9 +199,39 @@ def update_event(event_id):
             'date': updated_event['date'],
             'time': updated_event['time'],
             'location': updated_event['location'],
-            'description': updated_event['description']
+            'description': updated_event['description'],
+            'url': updated_event['url'],
+            'needs_review': bool(updated_event['needs_review'])
         })
         
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/events/<int:event_id>/approve', methods=['POST'])
+def approve_event(event_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('UPDATE events SET needs_review = 0 WHERE id = ?', (event_id,))
+        conn.commit()
+        conn.close()
+        return '', 204
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/events/<int:event_id>/flag', methods=['POST'])
+def flag_event(event_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('UPDATE events SET needs_review = 1 WHERE id = ?', (event_id,))
+        conn.commit()
+        conn.close()
+        return '', 204
     except Exception as e:
         conn.close()
         return jsonify({'error': str(e)}), 500

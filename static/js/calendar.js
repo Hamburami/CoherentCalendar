@@ -5,6 +5,8 @@ class Calendar {
         this.isAdmin = false;
         this.editingEventId = null;
         this.activePopup = null;
+        this.handleAddEventBound = this.handleAddEvent.bind(this);
+        this.handleEditEventBound = this.handleEditEvent.bind(this);
         this.initializeElements();
         this.setupEventListeners();
         this.renderCalendar();
@@ -23,6 +25,7 @@ class Calendar {
         this.addEventModal = document.getElementById('add-event-modal');
         this.closeModalButton = document.getElementById('close-modal-button');
         this.addEventForm = document.getElementById('add-event-form');
+        this.submitButton = this.addEventForm.querySelector('.submit-btn');
         this.adminAccessBtn = document.getElementById('adminAccessBtn');
         this.adminModal = document.getElementById('admin-modal');
         this.closeAdminModal = document.getElementById('close-admin-modal');
@@ -36,7 +39,7 @@ class Calendar {
         this.closeButton.addEventListener('click', () => this.hideEventDetails());
         this.addEventBtn.addEventListener('click', () => this.showAddEventModal());
         this.closeModalButton.addEventListener('click', () => this.hideAddEventModal());
-        this.addEventForm.addEventListener('submit', (e) => this.handleAddEvent(e));
+        this.addEventForm.addEventListener('submit', this.handleAddEventBound);
         this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
         this.closeAdminModal.addEventListener('click', () => this.hideAdminModal());
         this.adminForm.addEventListener('submit', (e) => this.handleAdminLogin(e));
@@ -49,8 +52,10 @@ class Calendar {
     }
 
     async fetchEvents() {
+        const year = this.currentDate.getFullYear();
+        const month = this.currentDate.getMonth() + 1;
         try {
-            const response = await fetch(`/api/events/${this.currentDate.getFullYear()}/${this.currentDate.getMonth() + 1}`);
+            const response = await fetch(`/api/events/${year}/${month}?admin=${this.isAdmin}`);
             this.events = await response.json();
         } catch (error) {
             console.error('Error fetching events:', error);
@@ -135,7 +140,7 @@ class Calendar {
         this.adminForm.reset();
     }
 
-    handleAdminLogin(e) {
+    async handleAdminLogin(e) {
         e.preventDefault();
         const password = document.getElementById('admin-password').value;
         
@@ -146,43 +151,77 @@ class Calendar {
             this.adminAccessBtn.textContent = 'Exit Admin Mode';
             this.adminAccessBtn.removeEventListener('click', () => this.showAdminModal());
             this.adminAccessBtn.addEventListener('click', () => this.exitAdminMode());
+            await this.renderCalendar();  // Refresh calendar to show pending events
         } else {
             alert('Incorrect password');
         }
     }
 
-    exitAdminMode() {
+    async exitAdminMode() {
         this.isAdmin = false;
         document.documentElement.setAttribute('data-admin-mode', 'false');
         this.adminAccessBtn.textContent = 'Admin Access';
         this.hideAdminModal();
         this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
+        await this.renderCalendar();  // Refresh calendar to hide pending events
     }
 
     showEventDetails(event) {
-        let content = `
-            <h4>${event.title}</h4>
-            <p><strong>Date:</strong> ${this.formatDisplayDate(event.date)}</p>
+        const content = document.getElementById('event-content');
+        const approveButton = this.eventDetails.querySelector('.approve-button');
+        const flagButton = this.eventDetails.querySelector('.flag-button');
+        const editButton = this.eventDetails.querySelector('.edit-button');
+        const deleteButton = this.eventDetails.querySelector('.delete-button');
+        
+        // Clear previous event listeners
+        approveButton.replaceWith(approveButton.cloneNode(true));
+        flagButton.replaceWith(flagButton.cloneNode(true));
+        editButton.replaceWith(editButton.cloneNode(true));
+        deleteButton.replaceWith(deleteButton.cloneNode(true));
+        
+        // Get fresh references
+        const newApproveButton = this.eventDetails.querySelector('.approve-button');
+        const newFlagButton = this.eventDetails.querySelector('.flag-button');
+        const newEditButton = this.eventDetails.querySelector('.edit-button');
+        const newDeleteButton = this.eventDetails.querySelector('.delete-button');
+
+        let detailsHtml = '';
+        if (event.needs_review) {
+            detailsHtml += '<div class="review-badge">Needs Review</div>';
+        }
+        
+        detailsHtml += `
+            <h3>${event.title}</h3>
+            <p><strong>Date:</strong> ${new Date(event.date).toLocaleDateString()}</p>
             ${event.time ? `<p><strong>Time:</strong> ${event.time}</p>` : ''}
             ${event.location ? `<p><strong>Location:</strong> ${event.location}</p>` : ''}
             ${event.description ? `<p><strong>Description:</strong> ${event.description}</p>` : ''}
-            ${event.url ? `<p><a href="${event.url}" target="_blank">More Information</a></p>` : ''}
+            ${event.url ? `<p><strong>URL:</strong> <a href="${event.url}" target="_blank">${event.url}</a></p>` : ''}
         `;
-
+        
+        content.innerHTML = detailsHtml;
+        
+        // Show/hide buttons based on admin status and review status
         if (this.isAdmin) {
-            content += `
-                <button class="edit-event-btn" onclick="calendar.editEvent(${JSON.stringify(event).replace(/"/g, '&quot;')})">
-                    Edit Event
-                </button>
-                <button class="delete-event-btn" onclick="calendar.deleteEvent(${event.id})">
-                    Delete Event
-                </button>
-            `;
+            newApproveButton.classList.toggle('hidden', !event.needs_review);
+            newFlagButton.classList.toggle('hidden', event.needs_review);
+            newEditButton.classList.remove('hidden');
+            newDeleteButton.classList.remove('hidden');
+            
+            // Add event listeners for admin actions
+            newApproveButton.addEventListener('click', () => this.approveEvent(event.id));
+            newFlagButton.addEventListener('click', () => this.flagEvent(event.id));
+            newEditButton.addEventListener('click', () => this.showEditEventModal(event));
+            newDeleteButton.addEventListener('click', () => this.deleteEvent(event.id));
+        } else {
+            newApproveButton.classList.add('hidden');
+            newFlagButton.classList.add('hidden');
+            newEditButton.classList.add('hidden');
+            newDeleteButton.classList.add('hidden');
         }
-
-        this.eventContent.innerHTML = content;
-        this.overlay.classList.remove('hidden');
+        
         this.eventDetails.classList.remove('hidden');
+        this.overlay.classList.remove('hidden');
     }
 
     async deleteEvent(eventId) {
@@ -211,23 +250,27 @@ class Calendar {
     }
 
     showAddEventModal() {
-        this.overlay.classList.remove('hidden');
+        this.editingEventId = null;
+        this.addEventForm.reset();
+        this.submitButton.textContent = 'Add Event';
         this.addEventModal.classList.remove('hidden');
+        this.overlay.classList.remove('hidden');
         
-        if (!this.editingEventId) {
-            this.addEventForm.reset();
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            document.getElementById('event-date').value = `${year}-${month}-${day}`;
-            this.addEventForm.onsubmit = (e) => this.handleAddEvent(e);
-        }
+        // Ensure correct event handler
+        this.addEventForm.removeEventListener('submit', this.handleEditEventBound);
+        this.addEventForm.addEventListener('submit', this.handleAddEventBound);
     }
 
     hideAddEventModal() {
         this.overlay.classList.add('hidden');
         this.addEventModal.classList.add('hidden');
+        this.addEventForm.reset();
+        this.editingEventId = null;
+        
+        // Reset event handlers
+        this.addEventForm.removeEventListener('submit', this.handleEditEventBound);
+        this.addEventForm.addEventListener('submit', this.handleAddEventBound);
+        this.submitButton.textContent = 'Add Event';
     }
 
     hideAllModals() {
@@ -240,11 +283,12 @@ class Calendar {
         e.preventDefault();
         
         const formData = {
-            title: document.getElementById('event-title').value,
+            title: document.getElementById('event-title').value.trim(),
             date: document.getElementById('event-date').value,
             time: document.getElementById('event-time').value || null,
-            location: document.getElementById('event-location').value || null,
-            description: document.getElementById('event-description').value || null
+            location: document.getElementById('event-location').value.trim() || null,
+            description: document.getElementById('event-description').value.trim() || null,
+            url: document.getElementById('event-url').value.trim() || null
         };
 
         try {
@@ -256,78 +300,82 @@ class Calendar {
                 body: JSON.stringify(formData)
             });
 
+            const data = await response.json();
+            
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
             }
 
-            // Hide the modal and refresh the calendar
+            // Reset form and hide modal
+            this.addEventForm.reset();
             this.hideAddEventModal();
+            
+            // Refresh calendar to show new event
             await this.renderCalendar();
         } catch (error) {
             console.error('Error adding event:', error);
-            alert('Failed to add event. Please try again.');
+            alert(`Failed to add event: ${error.message}`);
         }
     }
 
-    editEvent(event) {
-        this.hideEventDetails();
+    showEditEventModal(event) {
         this.editingEventId = event.id;
-        this.showAddEventModal();
+        this.addEventModal.classList.remove('hidden');
+        this.overlay.classList.remove('hidden');
         
-        // Set form values
+        // Populate form with event data
         document.getElementById('event-title').value = event.title;
         document.getElementById('event-date').value = event.date;
         document.getElementById('event-time').value = event.time || '';
         document.getElementById('event-location').value = event.location || '';
         document.getElementById('event-description').value = event.description || '';
+        document.getElementById('event-url').value = event.url || '';
         
-        // Update UI for edit mode
-        const submitBtn = this.addEventForm.querySelector('.submit-btn');
-        submitBtn.textContent = 'Update Event';
+        this.submitButton.textContent = 'Update Event';
         
-        // Replace form to clean up event handlers
-        const newForm = this.addEventForm.cloneNode(true);
-        this.addEventForm.parentNode.replaceChild(newForm, this.addEventForm);
-        this.addEventForm = newForm;
-        
-        // Add edit submit handler
-        this.addEventForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = {
-                title: document.getElementById('event-title').value,
-                date: document.getElementById('event-date').value,
-                time: document.getElementById('event-time').value || null,
-                location: document.getElementById('event-location').value || null,
-                description: document.getElementById('event-description').value || null
-            };
-            
-            try {
-                const response = await fetch(`/api/events/${this.editingEventId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                });
+        // Switch event handlers
+        this.addEventForm.removeEventListener('submit', this.handleAddEventBound);
+        this.addEventForm.addEventListener('submit', this.handleEditEventBound);
+    }
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                // Reset UI state
-                this.hideAddEventModal();
-                this.addEventForm.reset();
-                submitBtn.textContent = 'Add Event';
-                this.editingEventId = null;
-                
-                // Refresh calendar
+    async handleEditEvent(e) {
+        e.preventDefault();
+        
+        const formData = {
+            title: document.getElementById('event-title').value,
+            date: document.getElementById('event-date').value,
+            time: document.getElementById('event-time').value,
+            location: document.getElementById('event-location').value,
+            description: document.getElementById('event-description').value,
+            url: document.getElementById('event-url').value
+        };
+        
+        try {
+            const response = await fetch(`/api/events/${this.editingEventId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            if (response.ok) {
                 await this.renderCalendar();
-            } catch (error) {
-                console.error('Error updating event:', error);
-                alert('Failed to update event. Please try again.');
+                this.hideAddEventModal();
+                this.hideEventDetails();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Error updating event');
             }
-        }, { once: true });
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error updating event');
+        }
+        
+        // Reset event handlers
+        this.addEventForm.removeEventListener('submit', this.handleEditEventBound);
+        this.addEventForm.addEventListener('submit', this.handleAddEventBound);
+        this.submitButton.textContent = 'Add Event';
     }
 
     hideEventPopup() {
@@ -351,7 +399,7 @@ class Calendar {
             if (this.isAdmin) {
                 eventElement.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
-                    this.editEvent(event);
+                    this.showEditEventModal(event);
                 });
             }
             popup.appendChild(eventElement);
@@ -377,12 +425,15 @@ class Calendar {
         visibleEvents.forEach(event => {
             const eventElement = document.createElement('div');
             eventElement.className = 'event';
+            if (event.needs_review) {
+                eventElement.classList.add('needs-review');
+            }
             eventElement.textContent = event.title;
             eventElement.addEventListener('click', () => this.showEventDetails(event));
             if (this.isAdmin) {
                 eventElement.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
-                    this.editEvent(event);
+                    this.showEditEventModal(event);
                 });
             }
             eventsContainer.appendChild(eventElement);
@@ -397,6 +448,40 @@ class Calendar {
                 this.showEventPopup(remainingEvents, moreEventsElement);
             });
             eventsContainer.appendChild(moreEventsElement);
+        }
+    }
+
+    async approveEvent(eventId) {
+        try {
+            const response = await fetch(`/api/events/${eventId}/approve`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                await this.renderCalendar();
+                this.hideEventDetails();
+            } else {
+                console.error('Error approving event');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    async flagEvent(eventId) {
+        try {
+            const response = await fetch(`/api/events/${eventId}/flag`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                await this.renderCalendar();
+                this.hideEventDetails();
+            } else {
+                console.error('Error flagging event');
+            }
+        } catch (error) {
+            console.error('Error:', error);
         }
     }
 

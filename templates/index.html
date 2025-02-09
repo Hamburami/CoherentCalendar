@@ -35,6 +35,12 @@
         <div id="event-details" class="event-details hidden">
             <button id="close-button" class="close-button">&times;</button>
             <div id="event-content"></div>
+            <div class="event-actions">
+                <button class="edit-button">Edit</button>
+                <button class="delete-button">Delete</button>
+                <button class="approve-button hidden">Approve</button>
+                <button class="flag-button hidden">Flag for Review</button>
+            </div>
         </div>
 
         <div id="add-event-modal" class="modal hidden">
@@ -61,6 +67,10 @@
                     <div class="form-group">
                         <label for="event-description">Description</label>
                         <textarea id="event-description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-url">URL</label>
+                        <input type="url" id="event-url" placeholder="https://example.com">
                     </div>
                     <button type="submit" class="submit-btn">Add Event</button>
                 </form>

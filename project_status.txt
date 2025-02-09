@@ -14,33 +14,56 @@ events
 ├── time        TIME
 ├── location    TEXT
 ├── description TEXT
-└── url         TEXT
+├── url         TEXT
+└── needs_review BOOLEAN DEFAULT 0
 
-FEATURES
-✓ Calendar
-  • Month grid with navigation
-  • Fixed 120px cell height
-  • Scrollable event containers
-  • Event overflow handling
+FEATURES & WORKFLOWS
 
-✓ Events
-  • Add/Edit/Delete
+✓ Calendar View
+  • Month grid with navigation (prev/next)
+  • Fixed 120px cell height for consistency
+  • Scrollable event containers for overflow
+  • Event overflow indicator with popup list
   • Date format: YYYY-MM-DD (storage), M/D/YYYY (display)
-  • Modal detail view
-  • No delete confirmation
+
+✓ Event Management
+  • Add Event
+    - Required fields: title, date
+    - Optional fields: time, location, description, url
+    - New events require admin approval (needs_review = 1)
+    - Form resets after submission
+    - Immediate visibility to admins, hidden from users until approved
+  
+  • Edit Event
+    - Available only to admins
+    - Maintains current review status (approved stays approved, pending stays pending)
+    - No re-approval needed for admin edits
+  
+  • Delete Event
+    - Available only to admins
+    - No confirmation required (as per current design)
+    - Immediate removal from all views
 
 ✓ Admin Mode
-  • Password: 'future'
-  • Edit/Delete access
-  • Visual indicators, color scheme is red
+  • Access
+    - Password: 'future'
+    - Session-based (resets on page reload)
+    - Toggle between admin/user view
+  
+  • Capabilities
+    - View all events (approved and pending)
+    - Edit/Delete any event
+    - Approve pending events
+    - Visual indicators for admin mode and pending events
 
-API
-GET  /api/events/<year>/<month>
-POST /api/events
-PUT  /api/events/<id>
-DEL  /api/events/<id>
+API ENDPOINTS
+GET  /api/events/<year>/<month>  - List events (filtered by admin status)
+POST /api/events                 - Create new event (needs approval)
+PUT  /api/events/<id>           - Update event (no re-approval needed)
+DEL  /api/events/<id>           - Delete event (admin only)
 
 STATUS: All features implemented, no known issues
+
 CoherentCalendar Project Structure
 
 /CoherentCalendar
@@ -66,3 +89,4 @@ events
 - location (TEXT)
 - description (TEXT)
 - url (TEXT)
+- needs_review (BOOLEAN DEFAULT 0)

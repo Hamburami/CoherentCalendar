@@ -1,3 +1,4 @@
+console.log('Calendar script loaded');
 class Calendar {
     constructor() {
         this.currentDate = new Date();
@@ -11,6 +12,10 @@ class Calendar {
     }
 
     initializeElements() {
+        this.adminAccessBtn = document.getElementById('adminAccessBtn');
+        if (!this.adminAccessBtn) {
+            console.error('adminAccessBtn not found');
+        }
         this.calendarGrid = document.getElementById('calendar-grid');
         this.currentMonthElement = document.getElementById('currentMonth');
         this.prevMonthButton = document.getElementById('prevMonth');
@@ -19,14 +24,13 @@ class Calendar {
         this.eventContent = document.getElementById('event-content');
         this.overlay = document.getElementById('overlay');
         this.closeButton = document.getElementById('close-button');
+        this.adminAccessBtn = document.getElementById('adminAccessBtn');
+        this.adminModal = document.getElementById('admin-modal');
+        this.closeAdminModalButton = document.getElementById('close-admin-modal');
         this.addEventBtn = document.getElementById('addEventBtn');
         this.addEventModal = document.getElementById('add-event-modal');
         this.closeModalButton = document.getElementById('close-modal-button');
         this.addEventForm = document.getElementById('add-event-form');
-        this.adminAccessBtn = document.getElementById('adminAccessBtn');
-        this.adminModal = document.getElementById('admin-modal');
-        this.closeAdminModal = document.getElementById('close-admin-modal');
-        this.adminForm = document.getElementById('admin-form');
     }
 
     setupEventListeners() {
@@ -34,12 +38,11 @@ class Calendar {
         this.nextMonthButton.addEventListener('click', () => this.changeMonth(1));
         this.overlay.addEventListener('click', () => this.hideAllModals());
         this.closeButton.addEventListener('click', () => this.hideEventDetails());
+        this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
+        this.closeAdminModalButton.addEventListener('click', () => this.hideAdminModal());
         this.addEventBtn.addEventListener('click', () => this.showAddEventModal());
         this.closeModalButton.addEventListener('click', () => this.hideAddEventModal());
         this.addEventForm.addEventListener('submit', (e) => this.handleAddEvent(e));
-        this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
-        this.closeAdminModal.addEventListener('click', () => this.hideAdminModal());
-        this.adminForm.addEventListener('submit', (e) => this.handleAdminLogin(e));
         // Add click listener to close popups when clicking outside
         document.addEventListener('click', (e) => {
             if (this.activePopup && !e.target.closest('.events-popup') && !e.target.closest('.more-events')) {

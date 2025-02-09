@@ -14,3 +14,8 @@ Implementing Admin functionality - Harrison 2/5 10:45pm:
 
 "Put a button in the top top right corner that says "Admin Access". When the button is pressed it should prompt for a password, the admin password is "future" (Briefly explain how you implemented the password checking feature and how to update the password in the future) If the password is implemented correctly the website enters admin mode and the color scheme should change to a red hue. 
 When in admin mode, the user can click on events and has an option to delete them which updates the databse accordingly.
+
+Adding UI elemnts - Jack Slater 2/9 9:46am:
+add bootstrap
+
+when the user clicks the button admin access prompt the user for a password

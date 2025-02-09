@@ -5,17 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coherent Calendar</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <!-- Add Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Coherent Calendar</h1>
             <div class="calendar-controls">
-                <button id="addEventBtn" class="add-event-btn">Add Event</button>
-                <button id="adminAccessBtn" class="admin-btn">Admin Access</button>
-                <button id="prevMonth">&lt;</button>
+                <button id="addEventBtn" class="btn btn-primary add-event-btn" onclick="alert('Add Event Clicked')">Add Event</button>
+                <button id="adminAccessBtn" class="btn btn-secondary admin-btn" onclick="alert('Admin Access Clicked')">Admin Access</button>
+                <button id="prevMonth" class="btn btn-light">&lt;</button>
                 <h2 id="currentMonth"></h2>
-                <button id="nextMonth">&gt;</button>
+                <button id="nextMonth" class="btn btn-light">&gt;</button>
             </div>
         </header>
 
@@ -44,25 +46,25 @@
                 <form id="add-event-form">
                     <div class="form-group">
                         <label for="event-title">Event Name*</label>
-                        <input type="text" id="event-title" required>
+                        <input type="text" id="event-title" class="form-control" required>
                     </div>
                     <div class="form-group">
                         <label for="event-date">Date*</label>
-                        <input type="date" id="event-date" required autocomplete="off">
+                        <input type="date" id="event-date" class="form-control" required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="event-time">Time</label>
-                        <input type="time" id="event-time">
+                        <input type="time" id="event-time" class="form-control">
                     </div>
                     <div class="form-group">
                         <label for="event-location">Location</label>
-                        <input type="text" id="event-location">
+                        <input type="text" id="event-location" class="form-control">
                     </div>
                     <div class="form-group">
                         <label for="event-description">Description</label>
-                        <textarea id="event-description"></textarea>
+                        <textarea id="event-description" class="form-control"></textarea>
                     </div>
-                    <button type="submit" class="submit-btn">Add Event</button>
+                    <button type="submit" class="btn btn-primary submit-btn">Add Event</button>
                 </form>
             </div>
         </div>
@@ -74,9 +76,9 @@
                 <form id="admin-form">
                     <div class="form-group">
                         <label for="admin-password">Password</label>
-                        <input type="password" id="admin-password" required>
+                        <input type="password" id="admin-password" class="form-control" required>
                     </div>
-                    <button type="submit" class="submit-btn">Login</button>
+                    <button type="submit" class="btn btn-primary submit-btn">Login</button>
                 </form>
             </div>
         </div>
@@ -84,6 +86,10 @@
         <div id="overlay" class="overlay hidden"></div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+    <!-- Add Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="{{ url_for('static', filename='tempguys/calendar.js') }}"></script>
 </body>
 </html>

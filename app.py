@@ -2,6 +2,7 @@ from flask import Flask, render_template, jsonify, send_from_directory, request
 import sqlite3
 from datetime import datetime
 import os
+from scrapers.scraper_manager import ScraperManager
 
 app = Flask(__name__, static_url_path='', static_folder='static')
 
@@ -21,6 +22,8 @@ def init_db():
     conn.executescript(schema)
     conn.commit()
     conn.close()
+    
+    return db_path
 
 def get_db():
     db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
@@ -72,7 +75,9 @@ def get_events(year, month):
             'location': row['location'],
             'description': row['description'],
             'url': row['url'],
-            'needs_review': bool(row['needs_review'])
+            'needs_review': bool(row['needs_review']),
+            'source': row['source'],
+            'source_id': row['source_id']
         })
     
     conn.close()
@@ -91,8 +96,8 @@ def add_event():
     
     try:
         cursor.execute('''
-            INSERT INTO events (title, date, time, location, description, url, needs_review)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO events (title, date, time, location, description, url, needs_review, source, source_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             data['title'],
             data['date'],
@@ -100,7 +105,9 @@ def add_event():
             data.get('location', ''),
             data.get('description', ''),
             data.get('url', ''),
-            1
+            1,
+            'manual',
+            None
         ))
         
         conn.commit()
@@ -120,7 +127,9 @@ def add_event():
             'location': event['location'],
             'description': event['description'],
             'url': event['url'],
-            'needs_review': bool(event['needs_review'])
+            'needs_review': bool(event['needs_review']),
+            'source': event['source'],
+            'source_id': event['source_id']
         }), 201
         
     except Exception as e:
@@ -201,7 +210,9 @@ def update_event(event_id):
             'location': updated_event['location'],
             'description': updated_event['description'],
             'url': updated_event['url'],
-            'needs_review': bool(updated_event['needs_review'])
+            'needs_review': bool(updated_event['needs_review']),
+            'source': updated_event['source'],
+            'source_id': updated_event['source_id']
         })
         
     except Exception as e:
@@ -236,6 +247,24 @@ def flag_event(event_id):
         conn.close()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/scrape', methods=['POST'])
+def trigger_scrape():
+    """Manually trigger scraping of Trident events."""
+    try:
+        db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
+        scraper_manager = ScraperManager(db_path)
+        event_count = scraper_manager.run_scrapers()
+        return jsonify({
+            'message': f'Successfully scraped {event_count} events',
+            'event_count': event_count
+        })
+    except Exception as e:
+        app.logger.error(f'Error during scraping: {str(e)}')
+        return jsonify({
+            'error': 'Failed to scrape events',
+            'details': str(e)
+        }), 500
+
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=True, port=8000)
+    db_path = init_db()
+    app.run(host='0.0.0.0', port=8000, debug=True)

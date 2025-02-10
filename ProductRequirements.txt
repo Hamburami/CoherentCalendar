@@ -1,0 +1,161 @@
+Coherent Calendar – Product Requirements Document
+Version: 0.1 (MVP)
+Last Updated: 2/5/2025
+
+
+1. Overview
+Purpose:
+Coherent Calendar is designed to foster deeper community connections in Boulder, Colorado by aggregating local events from diverse community sites. It helps events gain larger audiences and helps everyday people feel a sense of belonging by connecting them to happenings in their region.
+
+Scope:
+
+Start with Boulder, Colorado events and plan to scale to other regions.
+Focus on both automated event aggregation (scraping) and manual event additions via URL and photo (with OCR support).
+Provide personalized recommendations based on individual engagement (Yes/No/Maybe responses) and a default global recommendation model.
+
+
+2. Objectives and Target Users
+Objectives:
+
+Connect community members with local events to increase participation.
+Serve event organizers by boosting event visibility.
+Cultivate a sense of belonging among local residents through a comprehensive local event calendar.
+Target Users:
+
+Community builders and event organizers.
+Everyday individuals in Boulder interested in discovering local, cool events.
+Anonymous or non-authenticated users can view global recommendations; user authentication is required for adding or editing events.
+
+
+3. Event Data Sources and Scraping
+Event Sources:
+
+Platforms such as Meetup, Eventbrite, Junkyard Social Events, Trident Café event calendar, The Dairy events calendar, boulder.earth, and more.
+The system must allow for fine-tuned, site-specific instructions (scraping templates) to handle different formats and oddities in event displays.
+Scraping Schedule:
+
+Configurable scheduling with a default that checks each supported calendar multiple times per week.
+Extracted Data:
+
+Event title, cohesive description, start and end dates/times, location (with time zone support), key details (ticket pricing, attendance requirements), and external URLs.
+Additional fields: event category, organizer contact information, and event cost.
+
+
+4. Data Quality, Confidence, and Duplicate Detection
+Confidence Scoring & Verification:
+
+Every event (whether added via scraping, URL entry, or photo OCR) is assigned a confidence level based on data completeness and consistency.
+Events with low confidence (e.g., uncertain date, location, or ambiguous details) are flagged and placed into a review queue.
+The system will prompt users (or privileged/admin users) to clarify uncertain details.
+Duplicate Detection:
+
+The deduplication algorithm uses a combination of title similarity, overlapping dates/times, location matches, and source URL comparisons.
+It allows for slight variations (minor discrepancies in descriptions) while still identifying events as duplicates.
+
+
+5. Manual Event Addition and OCR Processing
+Manual Addition:
+
+Users can add events by entering a URL or by snapping a photo of a flyer.
+For photos, the system employs OCR to extract event details.
+If OCR or URL scraping yields low-confidence results, the event is queued for manual verification by privileged users.
+User Guidance:
+
+The UI displays feedback (e.g., a confidence score or "needs review" status) so users know when additional verification is needed.
+
+
+6. User Interaction and Personalization
+User Actions:
+
+Users can respond to events with one of three options: Yes, No, or Maybe (interpreted as “would I attend” without commitment).
+Responses train both a global recommendation model and individual recommendation models.
+Recommendation Model:
+
+The default group model (composed of all individual responses) provides baseline recommendations.
+Future iterations may allow more nuanced, personalized recommendations and group models (e.g., incorporating friends’ preferences).
+Feedback Loop:
+
+User feedback is continuously collected to refine event recommendations.
+
+
+7. Dynamic Categorization and Tagging
+Automatic Tagging:
+
+The system automatically analyzes event details (title, description, location) to assign tags.
+A backend-maintained dynamic list of tags is continuously updated as new themes emerge.
+User Tagging Preferences:
+
+Users can enter natural language preferences, which the system uses to filter or highlight events.
+The matching mechanism should handle synonyms and contextual nuances for improved personalization.
+
+
+8. Admin and Moderation
+Event Approval:
+
+Initially, all manually added events (via URL or photo) as well as some scraped events require manual approval by admins.
+Privileged users/admins can also answer clarification prompts when low-confidence events are flagged.
+Moderation Tools:
+
+Provide an admin dashboard to review pending events, view confidence scores, and inspect duplicate candidates.
+Include reporting and analytics for event source health, user engagement, and admin review throughput.
+
+
+9. Technology and Integration
+Platform Architecture:
+
+The app will start as a web-based interface with plans for future mobile app development.
+Use a scalable backend to support scheduled scraping, OCR processing, dynamic tagging, and AI-based recommendation features.
+Performance & AI Efficiency:
+
+Use Gemini’s free tier for AI calls during the MVP phase.
+Optimize scraping and OCR processes to ensure efficient use of API calls and system resources.
+Time Zone and Locale Management:
+
+Support time zone management to ensure events display correctly for Boulder and later for other regions.
+Integration:
+
+Future integrations with popular calendar platforms (e.g., Google Calendar, Outlook) are planned.
+The initial focus is on a standalone system with potential for later integrations.
+
+
+10. Security, Privacy, and User Authentication
+Authentication:
+
+User authentication is required for users who add or edit events.
+The baseline calendar with global recommendations is publicly accessible without sign-in.
+Data Protection:
+
+Implement standard data protection measures to secure user data and sensitive event details.
+Ensure compliance with applicable data privacy regulations.
+
+
+11. Timeline and Future Enhancements
+MVP Launch:
+
+Focus on Boulder, Colorado as the initial region.
+MVP includes automated scraping, manual event addition with OCR, basic deduplication, and simple user responses (Yes/No/Maybe).
+Future Enhancements:
+
+Advanced personalization models for recommendations.
+Full mobile app integration.
+Social features (e.g., friends lists and using friends’ preferences).
+Expanded event details and richer user feedback (reviews/comments).
+Broader geographic scaling beyond Boulder.
+
+
+12. Assumptions, Constraints, and Dependencies
+Assumptions:
+
+Community event sites in Boulder are accessible for scraping.
+Users are willing to authenticate for event submissions while browsing remains open.
+Privileged users/admins are available to review flagged events.
+Constraints:
+
+Dependence on external sites’ formatting and availability.
+Limitations imposed by using Gemini’s free tier for AI processing during MVP.
+Initial focus is solely on Boulder, Colorado, which may limit event volume.
+Dependencies:
+
+Third-party libraries for OCR.
+External APIs for event sources (e.g., Meetup, Eventbrite).
+AI services for dynamic tagging and confidence scoring.

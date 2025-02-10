@@ -30,6 +30,7 @@ class Calendar {
         this.adminModal = document.getElementById('admin-modal');
         this.closeAdminModal = document.getElementById('close-admin-modal');
         this.adminForm = document.getElementById('admin-form');
+        this.scrapeTridentBtn = document.getElementById('scrapeTridentBtn');
     }
 
     setupEventListeners() {
@@ -43,6 +44,7 @@ class Calendar {
         this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
         this.closeAdminModal.addEventListener('click', () => this.hideAdminModal());
         this.adminForm.addEventListener('submit', (e) => this.handleAdminLogin(e));
+        this.scrapeTridentBtn.addEventListener('click', () => this.scrapeTrident());
         // Add click listener to close popups when clicking outside
         document.addEventListener('click', (e) => {
             if (this.activePopup && !e.target.closest('.events-popup') && !e.target.closest('.more-events')) {
@@ -190,9 +192,13 @@ class Calendar {
             detailsHtml += '<div class="review-badge">Needs Review</div>';
         }
         
+        // Format the date properly
+        const [year, month, day] = event.date.split('-');
+        const formattedDate = `${month}/${day}/${year}`;
+        
         detailsHtml += `
             <h3>${event.title}</h3>
-            <p><strong>Date:</strong> ${new Date(event.date).toLocaleDateString()}</p>
+            <p><strong>Date:</strong> ${formattedDate}</p>
             ${event.time ? `<p><strong>Time:</strong> ${event.time}</p>` : ''}
             ${event.location ? `<p><strong>Location:</strong> ${event.location}</p>` : ''}
             ${event.description ? `<p><strong>Description:</strong> ${event.description}</p>` : ''}
@@ -482,6 +488,37 @@ class Calendar {
             }
         } catch (error) {
             console.error('Error:', error);
+        }
+    }
+
+    async scrapeTrident() {
+        try {
+            this.scrapeTridentBtn.disabled = true;
+            this.scrapeTridentBtn.textContent = 'Scraping...';
+            
+            const response = await fetch('/api/scrape', { method: 'POST' });
+            const data = await response.json();
+            
+            if (response.ok) {
+                this.scrapeTridentBtn.textContent = `✓ Scraped ${data.event_count} events`;
+                setTimeout(() => {
+                    this.scrapeTridentBtn.textContent = 'Scrape Trident';
+                }, 3000);
+                await this.renderCalendar();  // Refresh the calendar
+            } else {
+                this.scrapeTridentBtn.textContent = '✗ Error scraping';
+                setTimeout(() => {
+                    this.scrapeTridentBtn.textContent = 'Scrape Trident';
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('Scraping error:', error);
+            this.scrapeTridentBtn.textContent = '✗ Error scraping';
+            setTimeout(() => {
+                this.scrapeTridentBtn.textContent = 'Scrape Trident';
+            }, 3000);
+        } finally {
+            this.scrapeTridentBtn.disabled = false;
         }
     }
 

@@ -1,7 +1,7 @@
 :root {
-    --primary-color: #2c3e50;
-    --secondary-color: #3498db;
-    --hover-color: #2c8ac9;
+    --primary-color: #585757;
+    --secondary-color: #aea56b;
+    --hover-color: #424343;
     --background-color: #f5f6fa;
     --text-color: #2c3e50;
     --border-color: #dcdde1;
@@ -63,10 +63,21 @@ header {
     margin: 1rem 0;
     position: relative;
 }
+#prevMonth {
+    order: 1px;
+}
+#nextMonth{
+    order:2
+}
+#currentMonth{
+    order: 3;
+    width: 200px;
+    text-align: center;
+}
 
 /* Calendar Grid */
 .calendar {
-    background-color: white;
+    background-color: rgb(208, 208, 208);
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     overflow: hidden;
@@ -212,8 +223,8 @@ button:hover {
 
 .admin-btn {
     position: absolute;
-    right: -20px;
-    top: -40px;
+    right:0;
+    top: 0px;
     background-color: var(--primary-color);
 }
 

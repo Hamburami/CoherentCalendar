@@ -434,6 +434,9 @@ class Calendar {
             if (event.needs_review) {
                 eventElement.classList.add('needs-review');
             }
+            if (event.isPersonal) {
+                eventElement.classList.add('personal-event');
+            }
             eventElement.textContent = event.title;
             eventElement.addEventListener('click', () => this.showEventDetails(event));
             if (this.isAdmin) {

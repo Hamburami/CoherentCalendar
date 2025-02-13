@@ -4,98 +4,188 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coherent Calendar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Coherent Calendar</h1>
-            <div class="calendar-controls">
-                <button id="addEventBtn" class="add-event-btn">Add Event</button>
-                <button id="adminAccessBtn" class="admin-btn">Admin Access</button>
-                <button id="prevMonth">&lt;</button>
-                <h2 id="currentMonth"></h2>
-                <button id="nextMonth">&gt;</button>
+        <button id="sidebarToggle" class="sidebar-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Tools</h3>
             </div>
-        </header>
-
-        <div class="calendar">
-            <div class="weekdays">
-                <div>Sun</div>
-                <div>Mon</div>
-                <div>Tue</div>
-                <div>Wed</div>
-                <div>Thu</div>
-                <div>Fri</div>
-                <div>Sat</div>
-            </div>
-            <div id="calendar-grid"></div>
-        </div>
-
-        <div class="calendar-footer">
-            <button id="scrapeTridentBtn" class="scrape-btn">Scrape Trident</button>
-        </div>
-
-        <div id="event-details" class="event-details hidden">
-            <button id="close-button" class="close-button">&times;</button>
-            <div id="event-content"></div>
-            <div class="event-actions">
-                <button class="edit-button">Edit</button>
-                <button class="delete-button">Delete</button>
-                <button class="approve-button hidden">Approve</button>
-                <button class="flag-button hidden">Flag for Review</button>
+            <div class="sidebar-content">
+                <button id="addEventBtn" class="sidebar-btn">
+                    <i class="fas fa-plus"></i>
+                    Add Event
+                </button>
+                <button id="scraperBtn" class="sidebar-btn">
+                    <i class="fas fa-download"></i>
+                    Event Scraper
+                </button>
+                <button id="adminAccessBtn" class="sidebar-btn">
+                    <i class="fas fa-lock"></i>
+                    Admin Access
+                </button>
             </div>
         </div>
+        
+        <div class="main-content">
+            <header>
+                <h1>Coherent Calendar</h1>
+                <div class="calendar-controls">
+                    <button id="prevMonth">&lt;</button>
+                    <h2 id="currentMonth"></h2>
+                    <button id="nextMonth">&gt;</button>
+                </div>
+            </header>
 
-        <div id="add-event-modal" class="modal hidden">
-            <div class="modal-content">
-                <button id="close-modal-button" class="close-button">&times;</button>
-                <h3>Add New Event</h3>
-                <form id="add-event-form">
-                    <div class="form-group">
-                        <label for="event-title">Event Name*</label>
-                        <input type="text" id="event-title" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="event-date">Date*</label>
-                        <input type="date" id="event-date" required autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label for="event-time">Time</label>
-                        <input type="time" id="event-time">
-                    </div>
-                    <div class="form-group">
-                        <label for="event-location">Location</label>
-                        <input type="text" id="event-location">
-                    </div>
-                    <div class="form-group">
-                        <label for="event-description">Description</label>
-                        <textarea id="event-description"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="event-url">URL</label>
-                        <input type="url" id="event-url" placeholder="https://example.com">
-                    </div>
-                    <button type="submit" class="submit-btn">Add Event</button>
-                </form>
+            <div class="calendar">
+                <div class="weekdays">
+                    <div>Sun</div>
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
+                </div>
+                <div id="calendar-grid"></div>
             </div>
-        </div>
 
-        <div id="admin-modal" class="modal hidden">
-            <div class="modal-content">
-                <button id="close-admin-modal" class="close-button">&times;</button>
-                <h3>Admin Access</h3>
-                <form id="admin-form">
-                    <div class="form-group">
-                        <label for="admin-password">Password</label>
-                        <input type="password" id="admin-password" required>
-                    </div>
-                    <button type="submit" class="submit-btn">Login</button>
-                </form>
+            <div class="calendar-footer">
+                <button id="scrapeTridentBtn" class="scrape-btn">Scrape Trident</button>
             </div>
-        </div>
 
-        <div id="overlay" class="overlay hidden"></div>
+            <div id="event-details" class="event-details hidden">
+                <button id="close-button" class="close-button">&times;</button>
+                <div id="event-content"></div>
+                <div class="event-actions">
+                    <button class="edit-button">Edit</button>
+                    <button class="delete-button">Delete</button>
+                    <button class="approve-button hidden">Approve</button>
+                    <button class="flag-button hidden">Flag for Review</button>
+                </div>
+            </div>
+
+            <div id="add-event-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button id="close-modal-button" class="close-button">&times;</button>
+                    <h3>Add New Event</h3>
+                    <form id="add-event-form">
+                        <div class="form-group">
+                            <label for="event-title">Event Name*</label>
+                            <input type="text" id="event-title" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="event-date">Date*</label>
+                            <input type="date" id="event-date" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="event-time">Time</label>
+                            <input type="time" id="event-time">
+                        </div>
+                        <div class="form-group">
+                            <label for="event-location">Location</label>
+                            <input type="text" id="event-location">
+                        </div>
+                        <div class="form-group">
+                            <label for="event-description">Description</label>
+                            <textarea id="event-description"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="event-url">URL</label>
+                            <input type="url" id="event-url" placeholder="https://example.com">
+                        </div>
+                        <button type="submit" class="submit-btn">Add Event</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="admin-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button id="close-admin-modal" class="close-button">&times;</button>
+                    <h3>Admin Access</h3>
+                    <form id="admin-form">
+                        <div class="form-group">
+                            <label for="admin-password">Password</label>
+                            <input type="password" id="admin-password" required>
+                        </div>
+                        <button type="submit" class="submit-btn">Login</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="scraper-modal" class="modal hidden">
+                <div class="modal-content scraper-content">
+                    <div class="modal-header">
+                        <h3>Event Scraper</h3>
+                        <button id="close-scraper-modal" class="close-button">&times;</button>
+                    </div>
+                    <div class="url-input-container">
+                        <div class="input-group">
+                            <i class="fas fa-link input-icon"></i>
+                            <input type="url" id="scraper-url" placeholder="Enter URL to scrape">
+                        </div>
+                        <button id="scrape-button" class="flow-button">
+                            <i class="fas fa-download"></i>
+                            Scrape
+                        </button>
+                    </div>
+                    <div class="scraper-flow">
+                        <div class="scraper-section">
+                            <div class="section-header">
+                                <h4>Raw Content</h4>
+                                <div class="step-number">1</div>
+                            </div>
+                            <div class="textbox-container">
+                                <textarea id="scrape-output" readonly class="flow-textbox"></textarea>
+                            </div>
+                            <button id="interpret-button" class="flow-button">
+                                <i class="fas fa-brain"></i>
+                                AI Interpret
+                            </button>
+                        </div>
+                        <div class="flow-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                        <div class="scraper-section">
+                            <div class="section-header">
+                                <h4>AI Interpretation</h4>
+                                <div class="step-number">2</div>
+                            </div>
+                            <div class="textbox-container">
+                                <textarea id="interpret-output" readonly class="flow-textbox"></textarea>
+                            </div>
+                            <button id="tosql-button" class="flow-button">
+                                <i class="fas fa-database"></i>
+                                To SQL
+                            </button>
+                        </div>
+                        <div class="flow-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                        <div class="scraper-section">
+                            <div class="section-header">
+                                <h4>SQL Command</h4>
+                                <div class="step-number">3</div>
+                            </div>
+                            <div class="textbox-container">
+                                <textarea id="sql-output" readonly class="flow-textbox"></textarea>
+                            </div>
+                            <button id="execute-sql-button" class="flow-button">
+                                <i class="fas fa-play"></i>
+                                Execute SQL
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="overlay" class="overlay hidden"></div>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>

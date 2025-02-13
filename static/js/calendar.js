@@ -31,6 +31,17 @@ class Calendar {
         this.closeAdminModal = document.getElementById('close-admin-modal');
         this.adminForm = document.getElementById('admin-form');
         this.scrapeTridentBtn = document.getElementById('scrapeTridentBtn');
+        this.scraperBtn = document.getElementById('scraperBtn');
+        this.scraperModal = document.getElementById('scraper-modal');
+        this.closeScraperModal = document.getElementById('close-scraper-modal');
+        this.scraperUrl = document.getElementById('scraper-url');
+        this.scrapeButton = document.getElementById('scrape-button');
+        this.interpretButton = document.getElementById('interpret-button');
+        this.toSqlButton = document.getElementById('tosql-button');
+        this.executeSqlButton = document.getElementById('execute-sql-button');
+        this.scrapeOutput = document.getElementById('scrape-output');
+        this.interpretOutput = document.getElementById('interpret-output');
+        this.sqlOutput = document.getElementById('sql-output');
     }
 
     setupEventListeners() {
@@ -44,11 +55,45 @@ class Calendar {
         this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
         this.closeAdminModal.addEventListener('click', () => this.hideAdminModal());
         this.adminForm.addEventListener('submit', (e) => this.handleAdminLogin(e));
-        this.scrapeTridentBtn.addEventListener('click', () => this.scrapeTrident());
+        this.scraperBtn.addEventListener('click', () => this.showScraperModal());
+        this.closeScraperModal.addEventListener('click', () => this.hideScraperModal());
+        this.scrapeButton.addEventListener('click', () => this.handleScrape());
+        this.interpretButton.addEventListener('click', () => this.handleInterpret());
+        this.toSqlButton.addEventListener('click', () => this.handleToSql());
+        this.executeSqlButton.addEventListener('click', () => this.handleExecuteSql());
         // Add click listener to close popups when clicking outside
         document.addEventListener('click', (e) => {
             if (this.activePopup && !e.target.closest('.events-popup') && !e.target.closest('.more-events')) {
                 this.hideEventPopup();
+            }
+        });
+
+        // Initialize sidebar state
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainContent = document.querySelector('.main-content');
+
+        // Function to toggle sidebar
+        function toggleSidebar() {
+            sidebar.classList.toggle('collapsed');
+            const icon = sidebarToggle.querySelector('i');
+            if (sidebar.classList.contains('collapsed')) {
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-bars');
+            }
+        }
+
+        sidebarToggle.addEventListener('click', toggleSidebar);
+
+        // Close sidebar on mobile when clicking outside
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target) && !sidebar.classList.contains('collapsed')) {
+                    toggleSidebar();
+                }
             }
         });
     }
@@ -283,6 +328,7 @@ class Calendar {
         this.hideEventDetails();
         this.hideAddEventModal();
         this.hideAdminModal();
+        this.hideScraperModal();
     }
 
     async handleAddEvent(e) {
@@ -528,6 +574,117 @@ class Calendar {
     changeMonth(delta) {
         this.currentDate.setMonth(this.currentDate.getMonth() + delta);
         this.renderCalendar();
+    }
+
+    showScraperModal() {
+        this.scraperModal.classList.remove('hidden');
+        this.overlay.classList.remove('hidden');
+    }
+
+    hideScraperModal() {
+        this.scraperModal.classList.add('hidden');
+        this.overlay.classList.add('hidden');
+    }
+
+    async handleScrape() {
+        const url = this.scraperUrl.value.trim();
+        if (!url) {
+            alert('Please enter a URL');
+            return;
+        }
+
+        try {
+            const response = await fetch('/scrape', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url }),
+            });
+            const data = await response.json();
+            this.scrapeOutput.value = data.text;
+            this.interpretButton.disabled = false;
+        } catch (error) {
+            console.error('Scraping failed:', error);
+            alert('Failed to scrape the URL');
+        }
+    }
+
+    async handleInterpret() {
+        const text = this.scrapeOutput.value.trim();
+        if (!text) {
+            alert('No text to interpret');
+            return;
+        }
+
+        try {
+            const response = await fetch('/aiinterpret', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text }),
+            });
+            const data = await response.json();
+            this.interpretOutput.value = data.text;
+            this.toSqlButton.disabled = false;
+        } catch (error) {
+            console.error('AI interpretation failed:', error);
+            alert('Failed to interpret the text');
+        }
+    }
+
+    async handleToSql() {
+        const text = this.interpretOutput.value.trim();
+        if (!text) {
+            alert('No text to convert to SQL');
+            return;
+        }
+
+        try {
+            const response = await fetch('/eventsql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text }),
+            });
+            const data = await response.json();
+            this.sqlOutput.value = data.sql;
+            this.executeSqlButton.disabled = false;
+        } catch (error) {
+            console.error('SQL conversion failed:', error);
+            alert('Failed to convert to SQL');
+        }
+    }
+
+    async handleExecuteSql() {
+        const sql = this.sqlOutput.value.trim();
+        if (!sql) {
+            alert('No SQL to execute');
+            return;
+        }
+
+        try {
+            const response = await fetch('/executesql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sql }),
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert('SQL executed successfully');
+                this.hideScraperModal();
+                this.renderCalendar(); // Refresh the calendar to show new events
+            } else {
+                alert('Failed to execute SQL: ' + data.error);
+            }
+        } catch (error) {
+            console.error('SQL execution failed:', error);
+            alert('Failed to execute SQL');
+        }
     }
 }
 

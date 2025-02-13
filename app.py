@@ -3,8 +3,10 @@ import sqlite3
 from datetime import datetime
 import os
 from scrapers.scraper_manager import ScraperManager
+from scraper_routes import scraper_bp
 
 app = Flask(__name__, static_url_path='', static_folder='static')
+app.register_blueprint(scraper_bp)
 
 def init_db():
     db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')

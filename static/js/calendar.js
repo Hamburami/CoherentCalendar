@@ -594,6 +594,10 @@ class Calendar {
         }
 
         try {
+            // Show loading state
+            this.scrapeButton.disabled = true;
+            this.scrapeButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scraping...';
+            
             const response = await fetch('/scrape', {
                 method: 'POST',
                 headers: {
@@ -601,12 +605,35 @@ class Calendar {
                 },
                 body: JSON.stringify({ url }),
             });
+            
             const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            // Update the scrape output with the raw text
             this.scrapeOutput.value = data.text;
+            
+            // Show success message
+            this.scrapeButton.innerHTML = '<i class="fas fa-check"></i> Content Retrieved';
+            setTimeout(() => {
+                this.scrapeButton.innerHTML = '<i class="fas fa-download"></i> Scrape';
+                this.scrapeButton.disabled = false;
+            }, 3000);
+
+            // Enable the next step (AI interpretation)
             this.interpretButton.disabled = false;
-        } catch (error) {
+        } 
+        catch (error) {
             console.error('Scraping failed:', error);
-            alert('Failed to scrape the URL');
+            this.scrapeButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
+            this.scrapeOutput.value = `Error: ${error.message}`;
+            
+            setTimeout(() => {
+                this.scrapeButton.innerHTML = '<i class="fas fa-download"></i> Scrape';
+                this.scrapeButton.disabled = false;
+            }, 3000);
         }
     }
 

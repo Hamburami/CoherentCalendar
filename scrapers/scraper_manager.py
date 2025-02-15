@@ -1,23 +1,25 @@
 import sqlite3
+import sys
+import os
 import logging
 from typing import List, Dict
-from .trident_scraper import TridentScraper
+from .eventbrite_scraper import EventbriteScraper  # Corrected relative import
 
 class ScraperManager:
     def __init__(self, db_path: str):
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
-        self.trident_scraper = TridentScraper()
+        self.eventbrite_scraper = EventbriteScraper()
 
     def run_scrapers(self) -> int:
-        """Run the Trident scraper and store events in the database."""
+        """Run the scraper and store events in the database."""
         total_events = 0
         
-        # Scrape Trident events
-        events = self.trident_scraper.scrape()
-        if events:
-            self._store_events(events)
-            total_events += len(events)
+        # Scrape Eventbrite events
+        eventbrite_events = self.eventbrite_scraper.scrape()
+        if eventbrite_events:
+            self._store_events(eventbrite_events)
+            total_events += len(eventbrite_events)
         
         return total_events
 
@@ -31,8 +33,8 @@ class ScraperManager:
                 # Check if event already exists
                 cursor.execute("""
                     SELECT id FROM events 
-                    WHERE title = ? AND date = ? AND source = 'Trident'
-                """, (event['title'], event['date']))
+                    WHERE title = ? AND date = ? AND source = ?
+                """, (event['title'], event['date'], event['source']))
                 
                 if not cursor.fetchone():
                     cursor.execute("""
@@ -43,7 +45,7 @@ class ScraperManager:
                     """, (
                         event['title'], event['date'], event['time'],
                         event['location'], event['description'], event['url'],
-                        False, 'Trident', event['source_id']
+                        event.get('needs_review', False), event['source'], event['source_id']
                     ))
             
             conn.commit()

@@ -30,7 +30,6 @@ class Calendar {
         this.adminModal = document.getElementById('admin-modal');
         this.closeAdminModal = document.getElementById('close-admin-modal');
         this.adminForm = document.getElementById('admin-form');
-        this.scrapeTridentBtn = document.getElementById('scrapeTridentBtn');
         this.scraperBtn = document.getElementById('scraperBtn');
         this.scraperModal = document.getElementById('scraper-modal');
         this.closeScraperModal = document.getElementById('close-scraper-modal');
@@ -61,6 +60,7 @@ class Calendar {
         this.interpretButton.addEventListener('click', () => this.handleInterpret());
         this.toSqlButton.addEventListener('click', () => this.handleToSql());
         this.executeSqlButton.addEventListener('click', () => this.handleExecuteSql());
+
         // Add click listener to close popups when clicking outside
         document.addEventListener('click', (e) => {
             if (this.activePopup && !e.target.closest('.events-popup') && !e.target.closest('.more-events')) {
@@ -71,7 +71,6 @@ class Calendar {
         // Initialize sidebar state
         const sidebarToggle = document.getElementById('sidebarToggle');
         const sidebar = document.querySelector('.sidebar');
-        const mainContent = document.querySelector('.main-content');
 
         // Function to toggle sidebar
         function toggleSidebar() {
@@ -195,10 +194,10 @@ class Calendar {
             this.isAdmin = true;
             document.documentElement.setAttribute('data-admin-mode', 'true');
             this.hideAdminModal();
-            this.adminAccessBtn.textContent = 'Exit Admin Mode';
+            this.adminAccessBtn.innerHTML = '<i class="fas fa-lock-open"></i>Exit Admin Mode';
             this.adminAccessBtn.removeEventListener('click', () => this.showAdminModal());
             this.adminAccessBtn.addEventListener('click', () => this.exitAdminMode());
-            await this.renderCalendar();  // Refresh calendar to show pending events
+            await this.renderCalendar();
         } else {
             alert('Incorrect password');
         }
@@ -207,10 +206,10 @@ class Calendar {
     async exitAdminMode() {
         this.isAdmin = false;
         document.documentElement.setAttribute('data-admin-mode', 'false');
-        this.adminAccessBtn.textContent = 'Admin Access';
+        this.adminAccessBtn.innerHTML = '<i class="fas fa-lock"></i>Admin Access';
         this.hideAdminModal();
         this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
-        await this.renderCalendar();  // Refresh calendar to hide pending events
+        await this.renderCalendar();
     }
 
     showEventDetails(event) {
@@ -540,42 +539,6 @@ class Calendar {
         }
     }
 
-    async scrapeTrident() {
-        try {
-            this.scrapeTridentBtn.disabled = true;
-            this.scrapeTridentBtn.textContent = 'Scraping...';
-            
-            const response = await fetch('/api/scrape', { method: 'POST' });
-            const data = await response.json();
-            
-            if (response.ok) {
-                this.scrapeTridentBtn.textContent = `✓ Scraped ${data.event_count} events`;
-                setTimeout(() => {
-                    this.scrapeTridentBtn.textContent = 'Scrape Trident';
-                }, 3000);
-                await this.renderCalendar();  // Refresh the calendar
-            } else {
-                this.scrapeTridentBtn.textContent = '✗ Error scraping';
-                setTimeout(() => {
-                    this.scrapeTridentBtn.textContent = 'Scrape Trident';
-                }, 3000);
-            }
-        } catch (error) {
-            console.error('Scraping error:', error);
-            this.scrapeTridentBtn.textContent = '✗ Error scraping';
-            setTimeout(() => {
-                this.scrapeTridentBtn.textContent = 'Scrape Trident';
-            }, 3000);
-        } finally {
-            this.scrapeTridentBtn.disabled = false;
-        }
-    }
-
-    changeMonth(delta) {
-        this.currentDate.setMonth(this.currentDate.getMonth() + delta);
-        this.renderCalendar();
-    }
-
     showScraperModal() {
         this.scraperModal.classList.remove('hidden');
         this.overlay.classList.remove('hidden');
@@ -685,6 +648,11 @@ class Calendar {
             console.error('SQL execution failed:', error);
             alert('Failed to execute SQL');
         }
+    }
+
+    changeMonth(delta) {
+        this.currentDate.setMonth(this.currentDate.getMonth() + delta);
+        this.renderCalendar();
     }
 }
 

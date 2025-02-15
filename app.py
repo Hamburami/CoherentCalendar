@@ -249,24 +249,6 @@ def flag_event(event_id):
         conn.close()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/scrape', methods=['POST'])
-def trigger_scrape():
-    """Manually trigger scraping of Trident events."""
-    try:
-        db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
-        scraper_manager = ScraperManager(db_path)
-        event_count = scraper_manager.run_scrapers()
-        return jsonify({
-            'message': f'Successfully scraped {event_count} events',
-            'event_count': event_count
-        })
-    except Exception as e:
-        app.logger.error(f'Error during scraping: {str(e)}')
-        return jsonify({
-            'error': 'Failed to scrape events',
-            'details': str(e)
-        }), 500
-
 if __name__ == '__main__':
     db_path = init_db()
     app.run(host='0.0.0.0', port=8000, debug=True)

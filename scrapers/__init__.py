@@ -1,4 +1,4 @@
 from .base_scraper import BaseScraper
-from .trident_scraper import TridentScraper
+from .eventbrite_scraper import EventbriteScraper
 
-__all__ = ['BaseScraper', 'TridentScraper']
+__all__ = ['BaseScraper', 'EventbriteScraper']

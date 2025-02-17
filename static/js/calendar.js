@@ -615,6 +615,9 @@ class Calendar {
             // Update the scrape output with the raw text
             this.scrapeOutput.value = data.text;
             
+            // Enable editing of the output
+            this.scrapeOutput.disabled = false;
+            
             // Show success message
             this.scrapeButton.innerHTML = '<i class="fas fa-check"></i> Content Retrieved';
             setTimeout(() => {
@@ -645,6 +648,10 @@ class Calendar {
         }
 
         try {
+            // Show loading state
+            this.interpretButton.disabled = true;
+            this.interpretButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Interpreting...';
+
             const response = await fetch('/aiinterpret', {
                 method: 'POST',
                 headers: {
@@ -653,11 +660,35 @@ class Calendar {
                 body: JSON.stringify({ text }),
             });
             const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            // Update the interpret output with the result
             this.interpretOutput.value = data.text;
+            
+            // Enable editing of the output
+            this.interpretOutput.disabled = false;
+            
+            // Show success message
+            this.interpretButton.innerHTML = '<i class="fas fa-check"></i> Interpreted';
+            setTimeout(() => {
+                this.interpretButton.innerHTML = '<i class="fas fa-brain"></i> AI Interpret';
+                this.interpretButton.disabled = false;
+            }, 3000);
+
+            // Enable the next step
             this.toSqlButton.disabled = false;
         } catch (error) {
             console.error('AI interpretation failed:', error);
-            alert('Failed to interpret the text');
+            this.interpretButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
+            alert('Failed to interpret the text: ' + error.message);
+            
+            setTimeout(() => {
+                this.interpretButton.innerHTML = '<i class="fas fa-brain"></i> AI Interpret';
+                this.interpretButton.disabled = false;
+            }, 3000);
         }
     }
 
@@ -669,6 +700,10 @@ class Calendar {
         }
 
         try {
+            // Show loading state
+            this.toSqlButton.disabled = true;
+            this.toSqlButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Converting...';
+
             const response = await fetch('/eventsql', {
                 method: 'POST',
                 headers: {
@@ -677,11 +712,35 @@ class Calendar {
                 body: JSON.stringify({ text }),
             });
             const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            // Update the SQL output with the result
             this.sqlOutput.value = data.sql;
+            
+            // Enable editing of the output
+            this.sqlOutput.disabled = false;
+            
+            // Show success message
+            this.toSqlButton.innerHTML = '<i class="fas fa-check"></i> Converted';
+            setTimeout(() => {
+                this.toSqlButton.innerHTML = '<i class="fas fa-database"></i> To SQL';
+                this.toSqlButton.disabled = false;
+            }, 3000);
+
+            // Enable the next step
             this.executeSqlButton.disabled = false;
         } catch (error) {
             console.error('SQL conversion failed:', error);
-            alert('Failed to convert to SQL');
+            this.toSqlButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
+            alert('Failed to convert to SQL: ' + error.message);
+            
+            setTimeout(() => {
+                this.toSqlButton.innerHTML = '<i class="fas fa-database"></i> To SQL';
+                this.toSqlButton.disabled = false;
+            }, 3000);
         }
     }
 
@@ -693,6 +752,10 @@ class Calendar {
         }
 
         try {
+            // Show loading state
+            this.executeSqlButton.disabled = true;
+            this.executeSqlButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Executing...';
+
             const response = await fetch('/executesql', {
                 method: 'POST',
                 headers: {
@@ -701,16 +764,30 @@ class Calendar {
                 body: JSON.stringify({ sql }),
             });
             const data = await response.json();
+            
             if (data.success) {
-                alert('SQL executed successfully');
+                // Show success message
+                this.executeSqlButton.innerHTML = '<i class="fas fa-check"></i> Success';
+                setTimeout(() => {
+                    this.executeSqlButton.innerHTML = '<i class="fas fa-play"></i> Execute SQL';
+                    this.executeSqlButton.disabled = false;
+                }, 2000);
+
+                // Hide modal and refresh calendar immediately
                 this.hideScraperModal();
-                this.renderCalendar(); // Refresh the calendar to show new events
+                await this.renderCalendar();
             } else {
-                alert('Failed to execute SQL: ' + data.error);
+                throw new Error(data.error || 'Failed to execute SQL');
             }
         } catch (error) {
             console.error('SQL execution failed:', error);
-            alert('Failed to execute SQL');
+            this.executeSqlButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
+            alert('Failed to execute SQL: ' + error.message);
+            
+            setTimeout(() => {
+                this.executeSqlButton.innerHTML = '<i class="fas fa-play"></i> Execute SQL';
+                this.executeSqlButton.disabled = false;
+            }, 2000);
         }
     }
 }

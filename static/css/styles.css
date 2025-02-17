@@ -938,24 +938,34 @@ header {
     padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    resize: none;
+    resize: vertical;
     font-family: 'Monaco', 'Consolas', monospace;
     font-size: 0.9rem;
     line-height: 1.5;
-    background-color: #f8f9fa;
+    background-color: #ffffff;
     color: #2c3e50;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .flow-textbox:focus {
     outline: none;
     border-color: var(--secondary-color);
-    box-shadow: 0 0 0 3px rgba(var(--secondary-color-rgb), 0.2);
+    box-shadow: 0 0 0 2px rgba(92, 188, 111, 0.2);
+}
+
+.flow-textbox:hover:not(:focus) {
+    border-color: var(--hover-color);
 }
 
 .flow-textbox:disabled {
     background-color: #e9ecef;
     color: #6c757d;
     cursor: not-allowed;
+}
+
+.textbox-container {
+    position: relative;
+    margin-bottom: 12px;
 }
 
 /* Scraper Flow Layout */

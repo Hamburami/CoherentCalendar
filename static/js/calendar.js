@@ -5,10 +5,18 @@ class Calendar {
         this.isAdmin = false;
         this.editingEventId = null;
         this.activePopup = null;
+        this.isAuthenticated = false;
+        this.user = null;
+
+        // Add auth-related handlers to existing bound methods
         this.handleAddEventBound = this.handleAddEvent.bind(this);
         this.handleEditEventBound = this.handleEditEvent.bind(this);
+        this.handleLoginBound = this.handleLogin.bind(this);
+        this.handleRegisterBound = this.handleRegister.bind(this);
+        
         this.initializeElements();
         this.setupEventListeners();
+        this.checkAuthState();
         this.renderCalendar();
     }
 
@@ -42,6 +50,27 @@ class Calendar {
         this.scrapeOutput = document.getElementById('scrape-output');
         this.interpretOutput = document.getElementById('interpret-output');
         this.sqlOutput = document.getElementById('sql-output');
+
+         
+        // Auth-related elements
+        this.loginBtn = document.getElementById('loginBtn');
+        this.registerBtn = document.getElementById('registerBtn');
+        this.loginModal = document.getElementById('login-modal');
+        this.registerModal = document.getElementById('register-modal');
+        this.profileModal = document.getElementById('profile-modal');
+        this.loginForm = document.getElementById('login-form');
+        this.registerForm = document.getElementById('register-form');
+        this.logoutBtn = document.getElementById('logout-btn');
+        this.overlay = document.getElementById('overlay');
+        
+        // Close buttons
+        this.closeLoginModal = document.getElementById('close-login-modal');
+        this.closeRegisterModal = document.getElementById('close-register-modal');
+        this.closeProfileModal = document.getElementById('close-profile-modal');
+        
+        // Switch links
+        this.switchToRegister = document.getElementById('switch-to-register');
+        this.switchToLogin = document.getElementById('switch-to-login');
     }
 
     setupEventListeners() {
@@ -61,6 +90,42 @@ class Calendar {
         this.interpretButton.addEventListener('click', () => this.handleInterpret());
         this.toSqlButton.addEventListener('click', () => this.handleToSql());
         this.executeSqlButton.addEventListener('click', () => this.handleExecuteSql());
+         // Add auth-related listeners
+         this.loginBtn.addEventListener('click', () => this.showLoginModal());
+         this.registerBtn.addEventListener('click', () => this.showRegisterModal());
+         this.loginForm.addEventListener('submit', this.handleLoginBound);
+         this.registerForm.addEventListener('submit', this.handleRegisterBound);
+         this.logoutBtn.addEventListener('click', () => this.handleLogout());
+         this.profileBtn.addEventListener('click', () => this.showProfileModal());
+         
+         // Modal controls
+         this.closeLoginModal.addEventListener('click', () => this.hideLoginModal());
+         this.closeRegisterModal.addEventListener('click', () => this.hideRegisterModal());
+         this.closeProfileModal.addEventListener('click', () => this.hideProfileModal());
+         
+        // Form submissions
+        this.loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+        this.registerForm.addEventListener('submit', (e) => this.handleRegister(e));
+
+         // Switch between login and register
+         this.switchToRegister.addEventListener('click', (e) => {
+             e.preventDefault();
+             this.hideLoginModal();
+             this.showRegisterModal();
+         });
+
+         this.switchToLogin.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.hideRegisterModal();
+            this.showLoginModal();
+        });
+
+        // Logout
+        this.logoutBtn.addEventListener('click', () => this.handleLogout());
+        
+        // Overlay click to close modals
+        this.overlay.addEventListener('click', () => this.hideAllModals());
+
         // Add click listener to close popups when clicking outside
         document.addEventListener('click', (e) => {
             if (this.activePopup && !e.target.closest('.events-popup') && !e.target.closest('.more-events')) {
@@ -585,163 +650,258 @@ class Calendar {
         this.scraperModal.classList.add('hidden');
         this.overlay.classList.add('hidden');
     }
+    setupEventListeners() {
+        // Add auth-related listeners
+        this.loginBtn.addEventListener('click', () => this.showLoginModal());
+        this.registerBtn.addEventListener('click', () => this.showRegisterModal());
+        this.loginForm.addEventListener('submit', this.handleLoginBound);
+        this.registerForm.addEventListener('submit', this.handleRegisterBound);
+        this.logoutBtn.addEventListener('click', () => this.handleLogout());
+        
+        // Modal controls
+        this.closeLoginModal.addEventListener('click', () => this.hideLoginModal());
+        this.closeRegisterModal.addEventListener('click', () => this.hideRegisterModal());
+        this.closeProfileModal.addEventListener('click', () => this.hideProfileModal());
+        
+        // Switch between login and register
+        this.switchToRegister.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.hideLoginModal();
+            this.showRegisterModal();
+        });
+        
+        this.switchToLogin.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.hideRegisterModal();
+            this.showLoginModal();
+        });
+    }
 
-    async handleScrape() {
-        const url = this.scraperUrl.value.trim();
-        if (!url) {
-            alert('Please enter a URL');
+    // Modal Management
+    showLoginModal() {
+        this.loginModal.classList.remove('hidden');
+        this.overlay.classList.remove('hidden');
+        document.getElementById('login-email').focus();
+    }
+
+    hideLoginModal() {
+        this.loginModal.classList.add('hidden');
+        this.overlay.classList.add('hidden');
+        this.loginForm.reset();
+    }
+
+    showRegisterModal() {
+        this.registerModal.classList.remove('hidden');
+        this.overlay.classList.remove('hidden');
+        document.getElementById('register-email').focus();
+    }
+
+    hideRegisterModal() {
+        this.registerModal.classList.add('hidden');
+        this.overlay.classList.add('hidden');
+        this.registerForm.reset();
+    }
+
+    showProfileModal() {
+        if (!this.isAuthenticated) {
+            this.showLoginModal();
             return;
         }
+        this.updateProfileUI();
+        this.profileModal.classList.remove('hidden');
+        this.overlay.classList.remove('hidden');
+    }
+
+    hideProfileModal() {
+        this.profileModal.classList.add('hidden');
+        this.overlay.classList.add('hidden');
+    }
+
+    hideAllModals() {
+        this.hideLoginModal();
+        this.hideRegisterModal();
+        this.hideProfileModal();
+    }
+
+    // Authentication Handlers
+    async handleLogin(e) {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
 
         try {
-            // Show loading state
-            this.scrapeButton.disabled = true;
-            this.scrapeButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scraping...';
-            
-            const response = await fetch('/scrape', {
+            const response = await fetch('/api/users/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ url }),
+                body: JSON.stringify({ email, password }),
             });
-            
+
             const data = await response.json();
-            
-            if (data.error) {
-                throw new Error(data.error);
+
+            if (response.ok) {
+                // Store token
+                localStorage.setItem('token', data.token);
+                this.user = data.user;
+                this.isAuthenticated = true;
+                
+                // Update UI
+                this.updateAuthState();
+                this.hideLoginModal();
+                this.showMessage('Successfully logged in!');
+            } else {
+                throw new Error(data.error || 'Login failed');
             }
-
-            // Update the scrape output with the raw text
-            this.scrapeOutput.value = data.text;
-            
-            // Enable editing of the output
-            this.scrapeOutput.disabled = false;
-            
-            // Show success message
-            this.scrapeButton.innerHTML = '<i class="fas fa-check"></i> Content Retrieved';
-            setTimeout(() => {
-                this.scrapeButton.innerHTML = '<i class="fas fa-download"></i> Scrape';
-                this.scrapeButton.disabled = false;
-            }, 3000);
-
-            // Enable the next step (AI interpretation)
-            this.interpretButton.disabled = false;
-        } 
-        catch (error) {
-            console.error('Scraping failed:', error);
-            this.scrapeButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
-            this.scrapeOutput.value = `Error: ${error.message}`;
-            
-            setTimeout(() => {
-                this.scrapeButton.innerHTML = '<i class="fas fa-download"></i> Scrape';
-                this.scrapeButton.disabled = false;
-            }, 3000);
+        } catch (error) {
+            this.showMessage(error.message, 'error');
         }
     }
 
-    async handleInterpret() {
-        const text = this.scrapeOutput.value.trim();
-        if (!text) {
-            alert('No text to interpret');
+    async handleRegister(e) {
+        e.preventDefault();
+        const email = document.getElementById('register-email').value;
+        const username = document.getElementById('register-username').value;
+        const password = document.getElementById('register-password').value;
+        const confirmPassword = document.getElementById('register-confirm-password').value;
+
+        if (password !== confirmPassword) {
+            this.showMessage('Passwords do not match', 'error');
             return;
         }
 
         try {
-            // Show loading state
-            this.interpretButton.disabled = true;
-            this.interpretButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Interpreting...';
-
-            const response = await fetch('/aiinterpret', {
+            const response = await fetch('/api/users/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ text }),
+                body: JSON.stringify({ email, username, password }),
             });
+
             const data = await response.json();
-            
-            if (data.error) {
-                throw new Error(data.error);
+
+            if (response.ok) {
+                // Store token
+                localStorage.setItem('token', data.token);
+                this.user = data.user;
+                this.isAuthenticated = true;
+                
+                // Update UI
+                this.updateAuthState();
+                this.hideRegisterModal();
+                this.showMessage('Account created successfully!');
+            } else {
+                throw new Error(data.error || 'Registration failed');
             }
-
-            // Update the interpret output with the result
-            this.interpretOutput.value = data.text;
-            
-            // Enable editing of the output
-            this.interpretOutput.disabled = false;
-            
-            // Show success message
-            this.interpretButton.innerHTML = '<i class="fas fa-check"></i> Interpreted';
-            setTimeout(() => {
-                this.interpretButton.innerHTML = '<i class="fas fa-brain"></i> AI Interpret';
-                this.interpretButton.disabled = false;
-            }, 3000);
-
-            // Enable the next step
-            this.toSqlButton.disabled = false;
         } catch (error) {
-            console.error('AI interpretation failed:', error);
-            this.interpretButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
-            alert('Failed to interpret the text: ' + error.message);
-            
-            setTimeout(() => {
-                this.interpretButton.innerHTML = '<i class="fas fa-brain"></i> AI Interpret';
-                this.interpretButton.disabled = false;
-            }, 3000);
+            this.showMessage(error.message, 'error');
         }
     }
 
-    async handleToSql() {
-        const text = this.interpretOutput.value.trim();
-        if (!text) {
-            alert('No text to convert to SQL');
-            return;
-        }
+    handleLogout() {
+        localStorage.removeItem('token');
+        this.user = null;
+        this.isAuthenticated = false;
+        this.updateAuthState();
+        this.hideProfileModal();
+        this.showMessage('Logged out successfully');
+    }
 
+    // Auth State Management
+    checkAuthState() {
+        const token = localStorage.getItem('token');
+        if (token) {
+            this.loadUserProfile();
+        }
+    }
+
+    async loadUserProfile() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
         try {
-            // Show loading state
-            this.toSqlButton.disabled = true;
-            this.toSqlButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Converting...';
-
-            const response = await fetch('/eventsql', {
-                method: 'POST',
+            const response = await fetch('/api/users/profile', {
                 headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text }),
+                    'Authorization': `Bearer ${token}`,
+                }
             });
-            const data = await response.json();
             
-            if (data.error) {
-                throw new Error(data.error);
+            if (!response.ok) {
+                throw new Error('Failed to load profile');
             }
-
-            // Update the SQL output with the result
-            this.sqlOutput.value = data.sql;
             
-            // Enable editing of the output
-            this.sqlOutput.disabled = false;
+            const data = await response.json();
+            this.user = data.user;
+            this.isAuthenticated = true;
+            this.updateAuthState();
             
-            // Show success message
-            this.toSqlButton.innerHTML = '<i class="fas fa-check"></i> Converted';
-            setTimeout(() => {
-                this.toSqlButton.innerHTML = '<i class="fas fa-database"></i> To SQL';
-                this.toSqlButton.disabled = false;
-            }, 3000);
-
-            // Enable the next step
-            this.executeSqlButton.disabled = false;
         } catch (error) {
-            console.error('SQL conversion failed:', error);
-            this.toSqlButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
-            alert('Failed to convert to SQL: ' + error.message);
-            
-            setTimeout(() => {
-                this.toSqlButton.innerHTML = '<i class="fas fa-database"></i> To SQL';
-                this.toSqlButton.disabled = false;
-            }, 3000);
+            console.error('Profile load error:', error);
+            this.handleLogout();
         }
+    }
+
+    updateAuthState() {
+        document.body.classList.toggle('authenticated', this.isAuthenticated);
+        
+        // Update button visibility
+        this.loginBtn.classList.toggle('hidden', this.isAuthenticated);
+        this.registerBtn.classList.toggle('hidden', this.isAuthenticated);
+        this.profileBtn.classList.toggle('hidden', !this.isAuthenticated);
+        
+        // Update other auth-dependent elements
+        document.querySelectorAll('.auth-required').forEach(el => {
+            el.style.display = this.isAuthenticated ? 'block' : 'none';
+        });
+        
+        document.querySelectorAll('.auth-hide').forEach(el => {
+            el.style.display = this.isAuthenticated ? 'none' : 'block';
+        });
+    }
+
+    updateProfileUI() {
+        if (!this.user) return;
+        
+        // Update profile information
+        document.getElementById('profile-username').textContent = this.user.username;
+        document.getElementById('profile-email').textContent = this.user.email;
+        
+        // Update preferences and stats if available
+        if (this.user.preferences) {
+            const preferencesContainer = document.getElementById('tag-preferences');
+            preferencesContainer.innerHTML = this.user.preferences
+                .map(pref => `
+                    <div class="tag-preference">
+                        <span class="tag-name">${pref.name}</span>
+                        <span class="weight">${(pref.weight * 100).toFixed(0)}%</span>
+                    </div>
+                `).join('');
+        }
+        
+        if (this.user.interactions) {
+            const statsContainer = document.getElementById('user-stats');
+            statsContainer.innerHTML = `
+                <div class="stat-box">
+                    <div class="number">${this.user.interactions.like || 0}</div>
+                    <div class="label">Liked Events</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">${this.user.interactions.maybe || 0}</div>
+                    <div class="label">Maybe</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">${this.user.interactions.dislike || 0}</div>
+                    <div class="label">Passed</div>
+                </div>
+            `;
+        }
+    }
+
+    showMessage(message, type = 'success') {
+        // Implement message display logic
+        console.log(`${type}: ${message}`);
+        // You could add a toast or notification system here
     }
 
     async handleExecuteSql() {
@@ -752,10 +912,6 @@ class Calendar {
         }
 
         try {
-            // Show loading state
-            this.executeSqlButton.disabled = true;
-            this.executeSqlButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Executing...';
-
             const response = await fetch('/executesql', {
                 method: 'POST',
                 headers: {
@@ -764,30 +920,16 @@ class Calendar {
                 body: JSON.stringify({ sql }),
             });
             const data = await response.json();
-            
             if (data.success) {
-                // Show success message
-                this.executeSqlButton.innerHTML = '<i class="fas fa-check"></i> Success';
-                setTimeout(() => {
-                    this.executeSqlButton.innerHTML = '<i class="fas fa-play"></i> Execute SQL';
-                    this.executeSqlButton.disabled = false;
-                }, 2000);
-
-                // Hide modal and refresh calendar immediately
+                alert('SQL executed successfully');
                 this.hideScraperModal();
-                await this.renderCalendar();
+                this.renderCalendar(); // Refresh the calendar to show new events
             } else {
-                throw new Error(data.error || 'Failed to execute SQL');
+                alert('Failed to execute SQL: ' + data.error);
             }
         } catch (error) {
             console.error('SQL execution failed:', error);
-            this.executeSqlButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
-            alert('Failed to execute SQL: ' + error.message);
-            
-            setTimeout(() => {
-                this.executeSqlButton.innerHTML = '<i class="fas fa-play"></i> Execute SQL';
-                this.executeSqlButton.disabled = false;
-            }, 2000);
+            alert('Failed to execute SQL');
         }
     }
 }

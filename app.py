@@ -34,9 +34,7 @@ def create_app(test_config=None):
     
     # Register blueprints
     from scraper_routes import scraper_bp
-    from user_routes import user_bp
     from tag_routes import tag_bp
-    app.register_blueprint(user_bp)
     app.register_blueprint(scraper_bp)
     app.register_blueprint(tag_bp)
 
@@ -273,82 +271,6 @@ def create_app(test_config=None):
                 'error': 'Failed to scrape events',
                 'details': str(e)
             }), 500
-    @user_bp.route('/api/users/register', methods=['POST'])
-    def register():
-        data = request.get_json()
-        
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        try:
-            # Hash password
-            password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
-            
-            # Insert user
-            cursor.execute('''
-                INSERT INTO users (email, username, password_hash)
-                VALUES (?, ?, ?)
-            ''', (data['email'], data['username'], password_hash))
-            
-            conn.commit()
-            user_id = cursor.lastrowid
-            
-            # Generate token
-            token = jwt.encode(
-                {'user_id': user_id},
-                os.getenv('JWT_SECRET', 'dev-secret-key'),
-                algorithm='HS256'
-            )
-            
-            return jsonify({
-                'token': token,
-                'user': {
-                    'id': user_id,
-                    'email': data['email'],
-                    'username': data['username']
-                }
-            }), 201
-        
-        except Exception as e:
-            conn.rollback()
-            return jsonify({'error': str(e)}), 400
-    
-        finally:
-            conn.close()
-
-    @user_bp.route('/api/users/login', methods=['POST'])
-    def login():
-        data = request.get_json()
-        
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        try:
-            cursor.execute('SELECT * FROM users WHERE email = ?', (data['email'],))
-            user = cursor.fetchone()
-            
-            if not user or not bcrypt.checkpw(data['password'].encode('utf-8'), user['password_hash']):
-                return jsonify({'error': 'Invalid email or password'}), 401
-            
-            token = jwt.encode(
-                {'user_id': user['id']},
-                os.getenv('JWT_SECRET', 'dev-secret-key'),
-                algorithm='HS256'
-            )
-            
-            return jsonify({
-                'token': token,
-                'user': {
-                    'id': user['id'],
-                    'email': user['email'],
-                    'username': user['username']
-                }
-            })
-            
-        except Exception as e:
-            return jsonify({'error': str(e)}), 400
-        finally:
-            conn.close()
 
     return app
 

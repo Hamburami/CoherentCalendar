@@ -34,7 +34,9 @@ def create_app(test_config=None):
     
     # Register blueprints
     from scraper_routes import scraper_bp
+    from user_routes import user_bp
     from tag_routes import tag_bp
+    app.register_blueprint(user_bp)
     app.register_blueprint(scraper_bp)
     app.register_blueprint(tag_bp)
 
@@ -275,23 +277,34 @@ def create_app(test_config=None):
     return app
 
 def init_db():
-    db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
-    schema_path = os.path.join(os.path.dirname(__file__), 'database', 'schema.sql')
-    
-    # Ensure database directory exists
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    
-    # Read schema from file
-    with open(schema_path, 'r') as f:
-        schema = f.read()
-    
-    # Initialize database with schema
-    conn = sqlite3.connect(db_path)
-    conn.executescript(schema)
-    conn.commit()
-    conn.close()
-    
-    return db_path
+    try:
+        db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
+        schema_path = os.path.join(os.path.dirname(__file__), 'database', 'schema.sql')
+        
+        print(f"Database path: {db_path}")
+        print(f"Schema path: {schema_path}")
+        
+        # Ensure database directory exists
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        
+        # Read schema from file
+        print("Reading schema file...")
+        with open(schema_path, 'r') as f:
+            schema = f.read()
+        print("Schema file read successfully")
+        
+        # Initialize database with schema
+        print("Initializing database...")
+        conn = sqlite3.connect(db_path)
+        conn.executescript(schema)
+        conn.commit()
+        conn.close()
+        print("Database initialized successfully")
+        
+        return db_path
+    except Exception as e:
+        print(f"Error initializing database: {str(e)}")
+        raise
 
 def get_db():
     db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')

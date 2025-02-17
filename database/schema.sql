@@ -1,7 +1,8 @@
--- First drop the table if it exists
+-- First drop the tables if they exist
 DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS users;
 
--- Create the table
+-- Create the events table
 CREATE TABLE events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -15,7 +16,16 @@ CREATE TABLE events (
     source_id TEXT
 );
 
--- Insert sample data
+-- Create the users table
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample event data
 INSERT INTO events (title, date, time, location, description, url, needs_review, source, source_id)
 VALUES 
     ('Boulder Winter Farmers Market', '2025-02-08', '08:00', 'Boulder County Fairgrounds', 'Indoor winter farmers market featuring local produce, baked goods, and crafts', 'https://bcfm.org', 0, 'manual', NULL),

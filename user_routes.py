@@ -68,11 +68,46 @@ def validate_password(password):
 
 @user_bp.route('/api/users/register', methods=['POST'])
 def register():
+    print("Received registration request")
     data = request.get_json()
+    print("Request data:", data)
+    
+    # Validate required fields
+    required_fields = ['email', 'username', 'password']
+    for field in required_fields:
+        if field not in data:
+            print(f"Missing required field: {field}")
+            return jsonify({'error': f'{field} is required'}), 400
+            
+    # Validate email format
+    if not validate_email(data['email']):
+        print(f"Invalid email format: {data['email']}")
+        return jsonify({'error': 'Invalid email format'}), 400
+        
+    # Validate password strength
+    if not validate_password(data['password']):
+        print("Password validation failed")
+        return jsonify({'error': 'Password must be at least 8 characters and contain uppercase, lowercase, and numbers'}), 400
+        
+    # Validate username length
+    if len(data['username']) < 3:
+        print(f"Username too short: {data['username']}")
+        return jsonify({'error': 'Username must be at least 3 characters long'}), 400
+    
     conn = get_db()
     cursor = conn.cursor()
     
     try:
+        # Check if email already exists
+        cursor.execute('SELECT id FROM users WHERE email = ?', (data['email'],))
+        if cursor.fetchone():
+            return jsonify({'error': 'Email already registered'}), 400
+            
+        # Check if username already exists
+        cursor.execute('SELECT id FROM users WHERE username = ?', (data['username'],))
+        if cursor.fetchone():
+            return jsonify({'error': 'Username already taken'}), 400
+        
         password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
         cursor.execute('''
             INSERT INTO users (email, username, password_hash)

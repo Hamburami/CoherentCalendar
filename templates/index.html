@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
+    <!-- Overlay -->
+    <div id="overlay" class="overlay hidden"></div>
+    
     <div class="container">
         <button id="sidebarToggle" class="sidebar-toggle">
             <i class="fas fa-bars"></i>
@@ -75,10 +78,6 @@
                     <div>Sat</div>
                 </div>
                 <div id="calendar-grid"></div>
-            </div>
-
-            <div class="calendar-footer">
-                <button id="scrapeTridentBtn" class="scrape-btn">Scrape Trident</button>
             </div>
 
             <!-- Event Details Modal -->
@@ -189,7 +188,7 @@
                             </small>
                         </div>
                         <div class="form-group">
-                            <label for="register-confirm-password">Confirm Password</label>
+                            <label for="register-confirm-password">Password</label>
                             <input type="password" id="register-confirm-password" required>
                         </div>
                         <button type="submit" class="submit-btn">Create Account</button>
@@ -201,33 +200,6 @@
                 </div>
             </div>
 
-            <!-- User Profile Modal -->
-            <div id="profile-modal" class="modal hidden">
-                <div class="modal-content">
-                    <button id="close-profile-modal" class="close-button">&times;</button>
-                    <h3>Your Profile</h3>
-                    <div class="profile-content">
-                        <div class="user-info">
-                            <h4 id="profile-username"></h4>
-                            <p id="profile-email"></p>
-                        </div>
-                        <div class="preferences-section">
-                            <h4>Event Preferences</h4>
-                            <div id="tag-preferences" class="tag-grid">
-                                <!-- Tag preferences will be populated here -->
-                            </div>
-                        </div>
-                        <div class="interaction-stats">
-                            <h4>Your Activity</h4>
-                            <div id="user-stats">
-                                <!-- User stats will be populated here -->
-                            </div>
-                        </div>
-                        <button id="logout-btn" class="submit-btn">Logout</button>
-                    </div>
-                </div>
-            </div>
-
             <!-- Scraper Modal -->
             <div id="scraper-modal" class="modal hidden">
                 <div class="modal-content scraper-content">
@@ -235,11 +207,18 @@
                         <h3>Event Scraper</h3>
                         <button id="close-scraper-modal" class="close-button">&times;</button>
                     </div>
-                    <div class="url-input-container">
-                        <div class="input-group">
-                            <i class="fas fa-link input-icon"></i>
-                            <input type="url" id="scraper-url" placeholder="Enter URL to scrape">
+                    <div class="scraper-body">
+                        <div class="scraper-options">
+                            <h4>Available Sources</h4>
+                            <div class="source-list">
+                                <div class="source-item">
+                                    <input type="checkbox" id="source-trident" value="trident">
+                                    <label for="source-trident">Trident Cafe</label>
+                                </div>
+                                <!-- Add more sources here -->
+                            </div>
                         </div>
+<<<<<<< Updated upstream
                         <button id="scrape-button" class="flow-button">
                             <i class="fas fa-download"></i>
                             Scrape
@@ -258,10 +237,18 @@
                                 <i class="fas fa-brain"></i>
                                 AI Interpret
                             </button>
+=======
+                        <div class="scraper-actions">
+                            <button id="start-scrape" class="submit-btn">Start Scraping</button>
+>>>>>>> Stashed changes
                         </div>
-                        <div class="flow-arrow">
-                            <i class="fas fa-arrow-right"></i>
+                        <div id="scraper-status" class="scraper-status hidden">
+                            <div class="progress-bar">
+                                <div class="progress"></div>
+                            </div>
+                            <p class="status-text">Scraping in progress...</p>
                         </div>
+<<<<<<< Updated upstream
                         <div class="scraper-section">
                             <div class="section-header">
                                 <h4>AI Interpretation</h4>
@@ -290,12 +277,15 @@
                                 <i class="fas fa-play"></i>
                                 Execute SQL
                             </button>
+=======
+                        <div id="scraper-results" class="scraper-results hidden">
+                            <h4>Results</h4>
+                            <div class="results-content"></div>
+>>>>>>> Stashed changes
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div id="overlay" class="overlay hidden"></div>
         </div>
     </div>
 

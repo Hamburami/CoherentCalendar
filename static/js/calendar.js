@@ -51,7 +51,6 @@ class Calendar {
         this.interpretOutput = document.getElementById('interpret-output');
         this.sqlOutput = document.getElementById('sql-output');
 
-         
         // Auth-related elements
         this.loginBtn = document.getElementById('loginBtn');
         this.registerBtn = document.getElementById('registerBtn');
@@ -74,93 +73,107 @@ class Calendar {
     }
 
     setupEventListeners() {
-        this.prevMonthButton.addEventListener('click', () => this.changeMonth(-1));
-        this.nextMonthButton.addEventListener('click', () => this.changeMonth(1));
-        this.overlay.addEventListener('click', () => this.hideAllModals());
-        this.closeButton.addEventListener('click', () => this.hideEventDetails());
-        this.addEventBtn.addEventListener('click', () => this.showAddEventModal());
-        this.closeModalButton.addEventListener('click', () => this.hideAddEventModal());
-        this.addEventForm.addEventListener('submit', this.handleAddEventBound);
-        this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
-        this.closeAdminModal.addEventListener('click', () => this.hideAdminModal());
-        this.adminForm.addEventListener('submit', (e) => this.handleAdminLogin(e));
-        this.scraperBtn.addEventListener('click', () => this.showScraperModal());
-        this.closeScraperModal.addEventListener('click', () => this.hideScraperModal());
-        this.scrapeButton.addEventListener('click', () => this.handleScrape());
-        this.interpretButton.addEventListener('click', () => this.handleInterpret());
-        this.toSqlButton.addEventListener('click', () => this.handleToSql());
-        this.executeSqlButton.addEventListener('click', () => this.handleExecuteSql());
-         // Add auth-related listeners
-         this.loginBtn.addEventListener('click', () => this.showLoginModal());
-         this.registerBtn.addEventListener('click', () => this.showRegisterModal());
-         this.loginForm.addEventListener('submit', this.handleLoginBound);
-         this.registerForm.addEventListener('submit', this.handleRegisterBound);
-         this.logoutBtn.addEventListener('click', () => this.handleLogout());
-         this.profileBtn.addEventListener('click', () => this.showProfileModal());
-         
-         // Modal controls
-         this.closeLoginModal.addEventListener('click', () => this.hideLoginModal());
-         this.closeRegisterModal.addEventListener('click', () => this.hideRegisterModal());
-         this.closeProfileModal.addEventListener('click', () => this.hideProfileModal());
-         
-        // Form submissions
-        this.loginForm.addEventListener('submit', (e) => this.handleLogin(e));
-        this.registerForm.addEventListener('submit', (e) => this.handleRegister(e));
-
-         // Switch between login and register
-         this.switchToRegister.addEventListener('click', (e) => {
-             e.preventDefault();
-             this.hideLoginModal();
-             this.showRegisterModal();
-         });
-
-         this.switchToLogin.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.hideRegisterModal();
-            this.showLoginModal();
-        });
-
-        // Logout
-        this.logoutBtn.addEventListener('click', () => this.handleLogout());
-        
-        // Overlay click to close modals
-        this.overlay.addEventListener('click', () => this.hideAllModals());
-
-        // Add click listener to close popups when clicking outside
-        document.addEventListener('click', (e) => {
-            if (this.activePopup && !e.target.closest('.events-popup') && !e.target.closest('.more-events')) {
-                this.hideEventPopup();
-            }
-        });
-
-        // Initialize sidebar state
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebar = document.querySelector('.sidebar');
-        const mainContent = document.querySelector('.main-content');
-
-        // Function to toggle sidebar
-        function toggleSidebar() {
-            sidebar.classList.toggle('collapsed');
-            const icon = sidebarToggle.querySelector('i');
-            if (sidebar.classList.contains('collapsed')) {
-                icon.classList.remove('fa-bars');
-                icon.classList.add('fa-chevron-right');
-            } else {
-                icon.classList.remove('fa-chevron-right');
-                icon.classList.add('fa-bars');
-            }
+        // Calendar navigation
+        if (this.prevMonthButton) {
+            this.prevMonthButton.addEventListener('click', () => this.changeMonth(-1));
         }
-
-        sidebarToggle.addEventListener('click', toggleSidebar);
-
-        // Close sidebar on mobile when clicking outside
-        document.addEventListener('click', (e) => {
-            if (window.innerWidth <= 768) {
-                if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target) && !sidebar.classList.contains('collapsed')) {
-                    toggleSidebar();
+        if (this.nextMonthButton) {
+            this.nextMonthButton.addEventListener('click', () => this.changeMonth(1));
+        }
+        
+        // Event details
+        if (this.closeButton) {
+            this.closeButton.addEventListener('click', () => this.hideEventDetails());
+        }
+        
+        // Add event modal
+        if (this.addEventBtn) {
+            this.addEventBtn.addEventListener('click', () => this.showAddEventModal());
+        }
+        if (this.closeModalButton) {
+            this.closeModalButton.addEventListener('click', () => this.hideAddEventModal());
+        }
+        if (this.addEventForm) {
+            this.addEventForm.addEventListener('submit', this.handleAddEventBound);
+        }
+        
+        // Admin modal
+        if (this.adminAccessBtn) {
+            this.adminAccessBtn.addEventListener('click', () => {
+                if (this.isAdmin) {
+                    this.exitAdminMode();
+                } else {
+                    this.showAdminModal();
                 }
-            }
-        });
+            });
+        }
+        if (this.closeAdminModal) {
+            this.closeAdminModal.addEventListener('click', () => this.hideAdminModal());
+        }
+        if (this.adminForm) {
+            this.adminForm.addEventListener('submit', (e) => this.handleAdminLogin(e));
+        }
+        
+        // Scraper modal
+        if (this.scraperBtn) {
+            this.scraperBtn.addEventListener('click', () => this.showScraperModal());
+        }
+        if (this.closeScraperModal) {
+            this.closeScraperModal.addEventListener('click', () => this.hideScraperModal());
+        }
+        
+        // Auth modals
+        if (this.loginBtn) {
+            this.loginBtn.addEventListener('click', () => this.showLoginModal());
+        }
+        if (this.registerBtn) {
+            this.registerBtn.addEventListener('click', () => this.showRegisterModal());
+        }
+        
+        // Close buttons for auth modals
+        if (this.closeLoginModal) {
+            this.closeLoginModal.addEventListener('click', () => this.hideLoginModal());
+        }
+        if (this.closeRegisterModal) {
+            this.closeRegisterModal.addEventListener('click', () => this.hideRegisterModal());
+        }
+        if (this.closeProfileModal) {
+            this.closeProfileModal.addEventListener('click', () => this.hideProfileModal());
+        }
+        
+        // Switch between login and register
+        if (this.switchToRegister) {
+            this.switchToRegister.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.hideLoginModal();
+                this.showRegisterModal();
+            });
+        }
+        
+        if (this.switchToLogin) {
+            this.switchToLogin.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.hideRegisterModal();
+                this.showLoginModal();
+            });
+        }
+        
+        // Form submissions
+        if (this.loginForm) {
+            this.loginForm.addEventListener('submit', this.handleLoginBound);
+        }
+        if (this.registerForm) {
+            this.registerForm.addEventListener('submit', this.handleRegisterBound);
+        }
+        
+        // Hide modals when clicking overlay
+        if (this.overlay) {
+            this.overlay.addEventListener('click', (e) => {
+                if (e.target === this.overlay) {
+                    this.hideAllModals();
+                }
+            });
+        }
     }
 
     async fetchEvents() {
@@ -241,15 +254,23 @@ class Calendar {
     }
 
     showAdminModal() {
-        this.overlay.classList.remove('hidden');
-        this.adminModal.classList.remove('hidden');
-        document.getElementById('admin-password').value = '';
+        if (this.adminModal) {
+            this.adminModal.classList.remove('hidden');
+            this.overlay.classList.remove('hidden');
+            if (document.getElementById('admin-password')) {
+                document.getElementById('admin-password').value = '';
+            }
+        }
     }
 
     hideAdminModal() {
-        this.overlay.classList.add('hidden');
-        this.adminModal.classList.add('hidden');
-        this.adminForm.reset();
+        if (this.adminModal) {
+            this.adminModal.classList.add('hidden');
+            this.overlay.classList.add('hidden');
+            if (this.adminForm) {
+                this.adminForm.reset();
+            }
+        }
     }
 
     async handleAdminLogin(e) {
@@ -261,8 +282,13 @@ class Calendar {
             document.documentElement.setAttribute('data-admin-mode', 'true');
             this.hideAdminModal();
             this.adminAccessBtn.textContent = 'Exit Admin Mode';
-            this.adminAccessBtn.removeEventListener('click', () => this.showAdminModal());
+            
+            // Remove all existing listeners before adding new one
+            const newAdminBtn = this.adminAccessBtn.cloneNode(true);
+            this.adminAccessBtn.parentNode.replaceChild(newAdminBtn, this.adminAccessBtn);
+            this.adminAccessBtn = newAdminBtn;
             this.adminAccessBtn.addEventListener('click', () => this.exitAdminMode());
+            
             await this.renderCalendar();  // Refresh calendar to show pending events
         } else {
             alert('Incorrect password');
@@ -273,8 +299,13 @@ class Calendar {
         this.isAdmin = false;
         document.documentElement.setAttribute('data-admin-mode', 'false');
         this.adminAccessBtn.textContent = 'Admin Access';
-        this.hideAdminModal();
+        
+        // Remove all existing listeners before adding new one
+        const newAdminBtn = this.adminAccessBtn.cloneNode(true);
+        this.adminAccessBtn.parentNode.replaceChild(newAdminBtn, this.adminAccessBtn);
+        this.adminAccessBtn = newAdminBtn;
         this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
+        
         await this.renderCalendar();  // Refresh calendar to hide pending events
     }
 
@@ -336,8 +367,12 @@ class Calendar {
             newDeleteButton.classList.add('hidden');
         }
         
-        this.eventDetails.classList.remove('hidden');
-        this.overlay.classList.remove('hidden');
+        if (this.eventDetails) {
+            this.eventDetails.classList.remove('hidden');
+        }
+        if (this.overlay) {
+            this.overlay.classList.remove('hidden');
+        }
     }
 
     async deleteEvent(eventId) {
@@ -361,16 +396,22 @@ class Calendar {
     }
 
     hideEventDetails() {
-        this.overlay.classList.add('hidden');
-        this.eventDetails.classList.add('hidden');
+        if (this.eventDetails) {
+            this.eventDetails.classList.add('hidden');
+            this.overlay.classList.add('hidden');
+        }
     }
 
     showAddEventModal() {
         this.editingEventId = null;
         this.addEventForm.reset();
         this.submitButton.textContent = 'Add Event';
-        this.addEventModal.classList.remove('hidden');
-        this.overlay.classList.remove('hidden');
+        if (this.addEventModal) {
+            this.addEventModal.classList.remove('hidden');
+        }
+        if (this.overlay) {
+            this.overlay.classList.remove('hidden');
+        }
         
         // Ensure correct event handler
         this.addEventForm.removeEventListener('submit', this.handleEditEventBound);
@@ -378,22 +419,34 @@ class Calendar {
     }
 
     hideAddEventModal() {
-        this.overlay.classList.add('hidden');
-        this.addEventModal.classList.add('hidden');
-        this.addEventForm.reset();
-        this.editingEventId = null;
-        
-        // Reset event handlers
-        this.addEventForm.removeEventListener('submit', this.handleEditEventBound);
-        this.addEventForm.addEventListener('submit', this.handleAddEventBound);
-        this.submitButton.textContent = 'Add Event';
+        if (this.addEventModal) {
+            this.addEventModal.classList.add('hidden');
+            this.overlay.classList.add('hidden');
+            this.addEventForm.reset();
+            this.editingEventId = null;
+        }
     }
 
     hideAllModals() {
-        this.hideEventDetails();
-        this.hideAddEventModal();
-        this.hideAdminModal();
-        this.hideScraperModal();
+        const modals = [
+            this.eventDetails,
+            this.addEventModal,
+            this.adminModal,
+            this.scraperModal,
+            this.loginModal,
+            this.registerModal,
+            this.profileModal
+        ];
+
+        modals.forEach(modal => {
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        });
+
+        if (this.overlay) {
+            this.overlay.classList.add('hidden');
+        }
     }
 
     async handleAddEvent(e) {
@@ -437,8 +490,12 @@ class Calendar {
 
     showEditEventModal(event) {
         this.editingEventId = event.id;
-        this.addEventModal.classList.remove('hidden');
-        this.overlay.classList.remove('hidden');
+        if (this.addEventModal) {
+            this.addEventModal.classList.remove('hidden');
+        }
+        if (this.overlay) {
+            this.overlay.classList.remove('hidden');
+        }
         
         // Populate form with event data
         document.getElementById('event-title').value = event.title;
@@ -642,85 +699,82 @@ class Calendar {
     }
 
     showScraperModal() {
-        this.scraperModal.classList.remove('hidden');
-        this.overlay.classList.remove('hidden');
+        if (this.scraperModal) {
+            this.scraperModal.classList.remove('hidden');
+        }
+        if (this.overlay) {
+            this.overlay.classList.remove('hidden');
+        }
     }
 
     hideScraperModal() {
-        this.scraperModal.classList.add('hidden');
-        this.overlay.classList.add('hidden');
-    }
-    setupEventListeners() {
-        // Add auth-related listeners
-        this.loginBtn.addEventListener('click', () => this.showLoginModal());
-        this.registerBtn.addEventListener('click', () => this.showRegisterModal());
-        this.loginForm.addEventListener('submit', this.handleLoginBound);
-        this.registerForm.addEventListener('submit', this.handleRegisterBound);
-        this.logoutBtn.addEventListener('click', () => this.handleLogout());
-        
-        // Modal controls
-        this.closeLoginModal.addEventListener('click', () => this.hideLoginModal());
-        this.closeRegisterModal.addEventListener('click', () => this.hideRegisterModal());
-        this.closeProfileModal.addEventListener('click', () => this.hideProfileModal());
-        
-        // Switch between login and register
-        this.switchToRegister.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.hideLoginModal();
-            this.showRegisterModal();
-        });
-        
-        this.switchToLogin.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.hideRegisterModal();
-            this.showLoginModal();
-        });
+        if (this.scraperModal) {
+            this.scraperModal.classList.add('hidden');
+        }
+        if (this.overlay) {
+            this.overlay.classList.add('hidden');
+        }
     }
 
     // Modal Management
     showLoginModal() {
-        this.loginModal.classList.remove('hidden');
-        this.overlay.classList.remove('hidden');
-        document.getElementById('login-email').focus();
+        if (this.loginModal) {
+            this.loginModal.classList.remove('hidden');
+        }
     }
 
     hideLoginModal() {
-        this.loginModal.classList.add('hidden');
-        this.overlay.classList.add('hidden');
-        this.loginForm.reset();
+        if (this.loginModal) {
+            this.loginModal.classList.add('hidden');
+            this.loginForm.reset();
+        }
     }
 
     showRegisterModal() {
-        this.registerModal.classList.remove('hidden');
-        this.overlay.classList.remove('hidden');
-        document.getElementById('register-email').focus();
+        if (this.registerModal) {
+            this.registerModal.classList.remove('hidden');
+        }
     }
 
     hideRegisterModal() {
-        this.registerModal.classList.add('hidden');
-        this.overlay.classList.add('hidden');
-        this.registerForm.reset();
+        if (this.registerModal) {
+            this.registerModal.classList.add('hidden');
+            this.registerForm.reset();
+        }
     }
 
     showProfileModal() {
-        if (!this.isAuthenticated) {
-            this.showLoginModal();
-            return;
+        if (this.profileModal) {
+            this.profileModal.classList.remove('hidden');
         }
-        this.updateProfileUI();
-        this.profileModal.classList.remove('hidden');
-        this.overlay.classList.remove('hidden');
     }
 
     hideProfileModal() {
-        this.profileModal.classList.add('hidden');
-        this.overlay.classList.add('hidden');
+        if (this.profileModal) {
+            this.profileModal.classList.add('hidden');
+        }
     }
 
     hideAllModals() {
-        this.hideLoginModal();
-        this.hideRegisterModal();
-        this.hideProfileModal();
+        const modals = [
+            this.eventDetails,
+            this.addEventModal,
+            this.adminModal,
+            this.scraperModal,
+            this.loginModal,
+            this.registerModal,
+            this.profileModal
+        ];
+
+        modals.forEach(modal => {
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        });
+
+        if (this.overlay) {
+            this.overlay.classList.add('hidden');
+        }
     }
 
     // Authentication Handlers
@@ -782,15 +836,17 @@ class Calendar {
             const data = await response.json();
 
             if (response.ok) {
-                // Store token
-                localStorage.setItem('token', data.token);
-                this.user = data.user;
-                this.isAuthenticated = true;
+                // Show success message
+                this.showMessage('Registration successful! Please log in.');
                 
-                // Update UI
-                this.updateAuthState();
-                this.hideRegisterModal();
-                this.showMessage('Account created successfully!');
+                // Clear the registration form
+                this.registerForm.reset();
+                
+                // Wait for 1.5 seconds before switching to login
+                setTimeout(() => {
+                    this.hideRegisterModal();
+                    this.showLoginModal();
+                }, 1500);
             } else {
                 throw new Error(data.error || 'Registration failed');
             }
@@ -846,9 +902,15 @@ class Calendar {
         document.body.classList.toggle('authenticated', this.isAuthenticated);
         
         // Update button visibility
-        this.loginBtn.classList.toggle('hidden', this.isAuthenticated);
-        this.registerBtn.classList.toggle('hidden', this.isAuthenticated);
-        this.profileBtn.classList.toggle('hidden', !this.isAuthenticated);
+        if (this.loginBtn) {
+            this.loginBtn.classList.toggle('hidden', this.isAuthenticated);
+        }
+        if (this.registerBtn) {
+            this.registerBtn.classList.toggle('hidden', this.isAuthenticated);
+        }
+        if (this.profileBtn) {
+            this.profileBtn.classList.toggle('hidden', !this.isAuthenticated);
+        }
         
         // Update other auth-dependent elements
         document.querySelectorAll('.auth-required').forEach(el => {
@@ -864,8 +926,12 @@ class Calendar {
         if (!this.user) return;
         
         // Update profile information
-        document.getElementById('profile-username').textContent = this.user.username;
-        document.getElementById('profile-email').textContent = this.user.email;
+        if (document.getElementById('profile-username')) {
+            document.getElementById('profile-username').textContent = this.user.username;
+        }
+        if (document.getElementById('profile-email')) {
+            document.getElementById('profile-email').textContent = this.user.email;
+        }
         
         // Update preferences and stats if available
         if (this.user.preferences) {

@@ -12,11 +12,32 @@
         <button id="sidebarToggle" class="sidebar-toggle">
             <i class="fas fa-bars"></i>
         </button>
+
+        <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <h3>Tools</h3>
             </div>
             <div class="sidebar-content">
+                <!-- Auth Buttons -->
+                <div class="auth-hide">
+                    <button id="loginBtn" class="sidebar-btn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Login
+                    </button>
+                    <button id="registerBtn" class="sidebar-btn">
+                        <i class="fas fa-user-plus"></i>
+                        Register
+                    </button>
+                </div>
+                
+                <!-- Profile Button (visible when logged in) -->
+                <button id="profileBtn" class="sidebar-btn auth-required">
+                    <i class="fas fa-user"></i>
+                    My Profile
+                </button>
+
+                <!-- Event Management -->
                 <button id="addEventBtn" class="sidebar-btn">
                     <i class="fas fa-plus"></i>
                     Add Event
@@ -31,7 +52,8 @@
                 </button>
             </div>
         </div>
-        
+
+        <!-- Main Content -->
         <div class="main-content">
             <header>
                 <h1>Coherent Calendar</h1>
@@ -59,6 +81,7 @@
                 <button id="scrapeTridentBtn" class="scrape-btn">Scrape Trident</button>
             </div>
 
+            <!-- Event Details Modal -->
             <div id="event-details" class="event-details hidden">
                 <button id="close-button" class="close-button">&times;</button>
                 <div id="event-content"></div>
@@ -70,6 +93,7 @@
                 </div>
             </div>
 
+            <!-- Add Event Modal -->
             <div id="add-event-modal" class="modal hidden">
                 <div class="modal-content">
                     <button id="close-modal-button" class="close-button">&times;</button>
@@ -104,6 +128,7 @@
                 </div>
             </div>
 
+            <!-- Admin Modal -->
             <div id="admin-modal" class="modal hidden">
                 <div class="modal-content">
                     <button id="close-admin-modal" class="close-button">&times;</button>
@@ -118,6 +143,92 @@
                 </div>
             </div>
 
+            <!-- User Authentication Modals -->
+            <!-- Login Modal -->
+            <div id="login-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button id="close-login-modal" class="close-button">&times;</button>
+                    <h3>Login</h3>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="login-email">Email</label>
+                            <input type="email" id="login-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit" class="submit-btn">Login</button>
+                        <p class="form-footer">
+                            Don't have an account? 
+                            <a href="#" id="switch-to-register">Register here</a>
+                        </p>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Register Modal -->
+            <div id="register-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button id="close-register-modal" class="close-button">&times;</button>
+                    <h3>Create Account</h3>
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="register-email">Email</label>
+                            <input type="email" id="register-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-username">Username</label>
+                            <input type="text" id="register-username" required minlength="3">
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Password</label>
+                            <input type="password" id="register-password" required minlength="8">
+                            <small class="help-text">
+                                Password must be at least 8 characters and contain uppercase, lowercase, and numbers
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-confirm-password">Confirm Password</label>
+                            <input type="password" id="register-confirm-password" required>
+                        </div>
+                        <button type="submit" class="submit-btn">Create Account</button>
+                        <p class="form-footer">
+                            Already have an account? 
+                            <a href="#" id="switch-to-login">Login here</a>
+                        </p>
+                    </form>
+                </div>
+            </div>
+
+            <!-- User Profile Modal -->
+            <div id="profile-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button id="close-profile-modal" class="close-button">&times;</button>
+                    <h3>Your Profile</h3>
+                    <div class="profile-content">
+                        <div class="user-info">
+                            <h4 id="profile-username"></h4>
+                            <p id="profile-email"></p>
+                        </div>
+                        <div class="preferences-section">
+                            <h4>Event Preferences</h4>
+                            <div id="tag-preferences" class="tag-grid">
+                                <!-- Tag preferences will be populated here -->
+                            </div>
+                        </div>
+                        <div class="interaction-stats">
+                            <h4>Your Activity</h4>
+                            <div id="user-stats">
+                                <!-- User stats will be populated here -->
+                            </div>
+                        </div>
+                        <button id="logout-btn" class="submit-btn">Logout</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scraper Modal -->
             <div id="scraper-modal" class="modal hidden">
                 <div class="modal-content scraper-content">
                     <div class="modal-header">

@@ -68,50 +68,23 @@ def validate_password(password):
 
 @user_bp.route('/api/users/register', methods=['POST'])
 def register():
-    """Register a new user."""
-    data = request.json
-    
-    if not all(k in data for k in ('email', 'password', 'username')):
-        return jsonify({'error': 'Email, password, and username are required'}), 400
-        
-    email = data['email'].lower()
-    password = data['password']
-    username = data['username']
-    
-    # Validate input
-    if not validate_email(email):
-        return jsonify({'error': 'Invalid email format'}), 400
-        
-    if not validate_password(password):
-        return jsonify({'error': 'Password must be at least 8 characters and contain uppercase, lowercase, and numbers'}), 400
-        
-    if len(username) < 3:
-        return jsonify({'error': 'Username must be at least 3 characters'}), 400
-        
+    data = request.get_json()
     conn = get_db()
     cursor = conn.cursor()
     
     try:
-        # Check if email or username already exists
-        cursor.execute('SELECT id FROM users WHERE email = ? OR username = ?', (email, username))
-        if cursor.fetchone():
-            return jsonify({'error': 'Email or username already exists'}), 409
-            
-        # Hash password
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
+        cursor.execute('''
+            INSERT INTO users (email, username, password_hash)
+            VALUES (?, ?, ?)
+        ''', (data['email'], data['username'], password_hash))
         
-        # Create user
-        cursor.execute(
-            'INSERT INTO users (email, password_hash, username) VALUES (?, ?, ?)',
-            (email, password_hash, username)
-        )
         conn.commit()
         user_id = cursor.lastrowid
         
-        # Generate token
         token = jwt.encode(
-            {'user_id': user_id, 'email': email},
-            JWT_SECRET,
+            {'user_id': user_id},
+            os.getenv('JWT_SECRET', 'dev-secret-key'),
             algorithm='HS256'
         )
         
@@ -119,52 +92,33 @@ def register():
             'token': token,
             'user': {
                 'id': user_id,
-                'email': email,
-                'username': username
+                'email': data['email'],
+                'username': data['username']
             }
         }), 201
         
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 400
     finally:
         conn.close()
 
 @user_bp.route('/api/users/login', methods=['POST'])
 def login():
-    """Log in a user."""
-    data = request.json
-    
-    if not all(k in data for k in ('email', 'password')):
-        return jsonify({'error': 'Email and password are required'}), 400
-        
-    email = data['email'].lower()
-    password = data['password']
-    
+    data = request.get_json()
     conn = get_db()
     cursor = conn.cursor()
     
     try:
-        cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+        cursor.execute('SELECT * FROM users WHERE email = ?', (data['email'],))
         user = cursor.fetchone()
         
-        if not user:
+        if not user or not bcrypt.checkpw(data['password'].encode('utf-8'), user['password_hash']):
             return jsonify({'error': 'Invalid email or password'}), 401
-            
-        if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash']):
-            return jsonify({'error': 'Invalid email or password'}), 401
-            
-        # Update last login
-        cursor.execute(
-            'UPDATE users SET last_login = ? WHERE id = ?',
-            (datetime.utcnow(), user['id'])
-        )
-        conn.commit()
         
-        # Generate token
         token = jwt.encode(
-            {'user_id': user['id'], 'email': user['email']},
-            JWT_SECRET,
+            {'user_id': user['id']},
+            os.getenv('JWT_SECRET', 'dev-secret-key'),
             algorithm='HS256'
         )
         
@@ -178,7 +132,7 @@ def login():
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 400
     finally:
         conn.close()
 

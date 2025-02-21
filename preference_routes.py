@@ -146,3 +146,37 @@ def get_recommended_events(user_id):
     except Exception as e:
         conn.close()
         return jsonify({'error': str(e)}), 500
+
+@preference_bp.route('/api/events', methods=['GET'])
+@token_required
+def get_events_by_tag(user_id):
+    """Get sample events for a specific tag."""
+    tag_id = request.args.get('tag_id')
+    limit = request.args.get('limit', 3, type=int)
+    
+    if not tag_id:
+        return jsonify({'error': 'tag_id is required'}), 400
+        
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get events with this tag, ordered by date
+        cursor.execute('''
+            SELECT e.*
+            FROM events e
+            JOIN event_tags et ON e.id = et.event_id
+            WHERE et.tag_id = ? AND e.needs_review = 0
+            AND e.date >= date('now')
+            ORDER BY e.date ASC
+            LIMIT ?
+        ''', (tag_id, limit))
+        
+        events = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        
+        return jsonify(events)
+        
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 500

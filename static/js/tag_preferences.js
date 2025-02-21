@@ -212,10 +212,17 @@ class TagPreferences {
 
             const events = await response.json();
             
+            // Format dates nicely
+            const formatDate = (dateStr, timeStr) => {
+                const date = new Date(dateStr);
+                const options = { weekday: 'short', month: 'short', day: 'numeric' };
+                return `${date.toLocaleDateString('en-US', options)}${timeStr ? ' at ' + timeStr : ''}`;
+            };
+            
             this.sampleEvents.innerHTML = events.length ? events.map(event => `
                 <div class="tag-sample-event">
                     <div class="event-title">${event.title}</div>
-                    <div class="event-date">${event.date}${event.time ? ' ' + event.time : ''}</div>
+                    <div class="event-date">${formatDate(event.date, event.time)}</div>
                     ${event.location ? `<div class="event-location">${event.location}</div>` : ''}
                 </div>
             `).join('') : '<p class="no-events">No upcoming events with this tag</p>';

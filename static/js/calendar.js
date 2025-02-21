@@ -27,6 +27,7 @@ class Calendar {
         this.nextMonthButton = document.getElementById('nextMonth');
         this.eventDetails = document.getElementById('event-details');
         this.eventContent = document.getElementById('event-content');
+        this.eventTags = document.getElementById('event-tags');
         this.overlay = document.getElementById('overlay');
         this.closeButton = document.getElementById('close-button');
         this.addEventBtn = document.getElementById('addEventBtn');
@@ -253,6 +254,46 @@ class Calendar {
         return `${parseInt(month)}/${parseInt(day)}/${year}`;
     }
 
+    renderEvents(dayElement, dayEvents) {
+        const eventsContainer = dayElement.querySelector('.events-container');
+        eventsContainer.innerHTML = '';
+
+        const maxVisibleEvents = 3;
+        const visibleEvents = dayEvents.slice(0, maxVisibleEvents);
+        const remainingEvents = dayEvents.slice(maxVisibleEvents);
+
+        visibleEvents.forEach(event => {
+            const eventElement = document.createElement('div');
+            eventElement.className = 'event';
+            if (event.needs_review) {
+                eventElement.classList.add('needs-review');
+            }
+            if (event.isPersonal) {
+                eventElement.classList.add('personal-event');
+            }
+            eventElement.textContent = event.title;
+            eventElement.addEventListener('click', () => this.showEventDetails(event));
+            if (this.isAdmin) {
+                eventElement.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    this.showEditEventModal(event);
+                });
+            }
+            eventsContainer.appendChild(eventElement);
+        });
+
+        if (remainingEvents.length > 0) {
+            const moreEventsElement = document.createElement('div');
+            moreEventsElement.className = 'more-events';
+            moreEventsElement.textContent = `+ ${remainingEvents.length} more`;
+            moreEventsElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showEventPopup(dayEvents, moreEventsElement);
+            });
+            eventsContainer.appendChild(moreEventsElement);
+        }
+    }
+
     showAdminModal() {
         if (this.adminModal) {
             this.adminModal.classList.remove('hidden');
@@ -311,6 +352,7 @@ class Calendar {
 
     showEventDetails(event) {
         const content = document.getElementById('event-content');
+        const tagsContainer = document.getElementById('event-tags');
         const approveButton = this.eventDetails.querySelector('.approve-button');
         const flagButton = this.eventDetails.querySelector('.flag-button');
         const editButton = this.eventDetails.querySelector('.edit-button');
@@ -347,6 +389,18 @@ class Calendar {
         `;
         
         content.innerHTML = detailsHtml;
+
+        // Display tags
+        if (event.tags && event.tags.length > 0) {
+            const tagsHtml = event.tags.map(tag => `
+                <div class="event-tag" style="background-color: ${tag.color || '#808080'}">${tag.name}</div>
+            `).join('');
+            tagsContainer.innerHTML = tagsHtml;
+            tagsContainer.classList.remove('hidden');
+        } else {
+            tagsContainer.innerHTML = '';
+            tagsContainer.classList.add('hidden');
+        }
         
         // Show/hide buttons based on admin status and review status
         if (this.isAdmin) {
@@ -560,72 +614,67 @@ class Calendar {
     }
 
     showEventPopup(events, anchorElement) {
-        this.hideEventPopup();
+        if (this.activePopup) {
+            this.hideEventPopup();
+        }
 
         const popup = document.createElement('div');
-        popup.className = 'events-popup';
+        popup.className = 'event-popup';
         
-        events.forEach(event => {
-            const eventElement = document.createElement('div');
-            eventElement.className = 'event';
-            eventElement.textContent = event.title;
-            eventElement.addEventListener('click', () => this.showEventDetails(event));
-            if (this.isAdmin) {
-                eventElement.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    this.showEditEventModal(event);
-                });
-            }
-            popup.appendChild(eventElement);
-        });
+        const popupContent = events.map(event => {
+            const needsReviewBadge = event.needs_review ? '<span class="review-badge-small">Review</span>' : '';
+            
+            // Create tags HTML if event has tags
+            const tagsHtml = event.tags && event.tags.length > 0 
+                ? `<div class="event-tags">
+                    ${event.tags.map(tag => `
+                        <div class="event-tag" style="background-color: ${tag.color || '#808080'}">${tag.name}</div>
+                    `).join('')}
+                   </div>`
+                : '';
+            
+            return `
+                <div class="popup-event" data-event-id="${event.id}">
+                    <div class="popup-event-header">
+                        ${needsReviewBadge}
+                        <strong>${event.title}</strong>
+                    </div>
+                    ${event.time ? `<div class="popup-event-time">${event.time}</div>` : ''}
+                    ${event.location ? `<div class="popup-event-location">${event.location}</div>` : ''}
+                    ${tagsHtml}
+                </div>
+            `;
+        }).join('');
 
-        // Position the popup relative to the anchor element
+        popup.innerHTML = popupContent;
+        
+        // Position popup
         const rect = anchorElement.getBoundingClientRect();
-        popup.style.left = `${rect.left}px`;
-        popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
-
+        popup.style.position = 'absolute';
+        popup.style.left = `${rect.left + window.scrollX}px`;
+        popup.style.top = `${rect.bottom + window.scrollY}px`;
+        
+        // Add click handlers
+        popup.addEventListener('click', (e) => {
+            const eventElement = e.target.closest('.popup-event');
+            if (eventElement) {
+                const eventId = eventElement.dataset.eventId;
+                const event = events.find(ev => ev.id === parseInt(eventId));
+                if (event) {
+                    this.showEventDetails(event);
+                }
+            }
+        });
+        
         document.body.appendChild(popup);
         this.activePopup = popup;
-    }
-
-    renderEvents(dayElement, dayEvents) {
-        const eventsContainer = dayElement.querySelector('.events-container');
-        eventsContainer.innerHTML = '';
-
-        const maxVisibleEvents = 3;
-        const visibleEvents = dayEvents.slice(0, maxVisibleEvents);
-        const remainingEvents = dayEvents.slice(maxVisibleEvents);
-
-        visibleEvents.forEach(event => {
-            const eventElement = document.createElement('div');
-            eventElement.className = 'event';
-            if (event.needs_review) {
-                eventElement.classList.add('needs-review');
+        
+        // Hide popup when clicking outside
+        document.addEventListener('click', (e) => {
+            if (this.activePopup && !this.activePopup.contains(e.target) && !anchorElement.contains(e.target)) {
+                this.hideEventPopup();
             }
-            if (event.isPersonal) {
-                eventElement.classList.add('personal-event');
-            }
-            eventElement.textContent = event.title;
-            eventElement.addEventListener('click', () => this.showEventDetails(event));
-            if (this.isAdmin) {
-                eventElement.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    this.showEditEventModal(event);
-                });
-            }
-            eventsContainer.appendChild(eventElement);
         });
-
-        if (remainingEvents.length > 0) {
-            const moreEventsElement = document.createElement('div');
-            moreEventsElement.className = 'more-events';
-            moreEventsElement.textContent = `+ ${remainingEvents.length} more`;
-            moreEventsElement.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.showEventPopup(remainingEvents, moreEventsElement);
-            });
-            eventsContainer.appendChild(moreEventsElement);
-        }
     }
 
     async approveEvent(eventId) {
@@ -795,8 +844,13 @@ class Calendar {
             const data = await response.json();
 
             if (response.ok) {
-                // Store token
-                localStorage.setItem('token', data.token);
+                // Store token and update global state
+                const token = data.token;
+                localStorage.setItem('token', token);
+                window.authToken = token;
+                window.isAuthenticated = true;
+                
+                // Update instance state
                 this.user = data.user;
                 this.isAuthenticated = true;
                 
@@ -804,6 +858,9 @@ class Calendar {
                 this.updateAuthState();
                 this.hideLoginModal();
                 this.showMessage('Successfully logged in!');
+                
+                // Refresh calendar to show personalized content
+                this.renderCalendar();
             } else {
                 throw new Error(data.error || 'Login failed');
             }
@@ -857,19 +914,30 @@ class Calendar {
 
     handleLogout() {
         localStorage.removeItem('token');
-        this.user = null;
+        window.authToken = null;
+        window.isAuthenticated = false;
         this.isAuthenticated = false;
+        this.user = null;
         this.updateAuthState();
-        this.hideProfileModal();
-        this.showMessage('Logged out successfully');
+        this.renderCalendar();
+        this.showMessage('Successfully logged out!');
     }
 
     // Auth State Management
     checkAuthState() {
         const token = localStorage.getItem('token');
         if (token) {
+            window.authToken = token;
+            window.isAuthenticated = true;
+            this.isAuthenticated = true;
             this.loadUserProfile();
+        } else {
+            window.authToken = null;
+            window.isAuthenticated = false;
+            this.isAuthenticated = false;
+            this.user = null;
         }
+        this.updateAuthState();
     }
 
     async loadUserProfile() {

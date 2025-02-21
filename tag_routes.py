@@ -5,24 +5,18 @@ from datetime import datetime
 tag_bp = Blueprint('tags', __name__)
 
 def get_db():
-    conn = sqlite3.connect('database/database.db')
+    conn = sqlite3.connect('database/events.db')
     conn.row_factory = sqlite3.Row
     return conn
 
 @tag_bp.route('/api/tags', methods=['GET'])
 def get_tags():
-    """Get all tags, optionally filtered by category."""
-    category = request.args.get('category')
-    
+    """Get all tags."""
     conn = get_db()
     cursor = conn.cursor()
     
     try:
-        if category:
-            cursor.execute('SELECT * FROM tags WHERE category = ?', (category,))
-        else:
-            cursor.execute('SELECT * FROM tags ORDER BY category, name')
-        
+        cursor.execute('SELECT * FROM tags ORDER BY name')
         tags = [dict(row) for row in cursor.fetchall()]
         conn.close()
         return jsonify(tags)
@@ -44,8 +38,8 @@ def create_tag():
     
     try:
         cursor.execute(
-            'INSERT INTO tags (name, category) VALUES (?, ?)',
-            (data['name'].lower(), data.get('category'))
+            'INSERT INTO tags (name, color, created_at) VALUES (?, ?, ?)',
+            (data['name'].lower(), data.get('color', '#808080'), datetime.now())
         )
         conn.commit()
         tag_id = cursor.lastrowid
@@ -71,10 +65,11 @@ def get_event_tags(event_id):
     
     try:
         cursor.execute('''
-            SELECT t.*, et.confidence
+            SELECT t.*
             FROM tags t
             JOIN event_tags et ON t.id = et.tag_id
             WHERE et.event_id = ?
+            ORDER BY t.name
         ''', (event_id,))
         
         tags = [dict(row) for row in cursor.fetchall()]
@@ -99,39 +94,41 @@ def add_event_tags(event_id):
         # Start transaction
         cursor.execute('BEGIN TRANSACTION')
         
-        for tag_data in data['tags']:
-            tag_id = tag_data.get('id')
-            confidence = tag_data.get('confidence', 1.0)
+        # Get existing tags for this event
+        cursor.execute('SELECT tag_id FROM event_tags WHERE event_id = ?', (event_id,))
+        existing_tag_ids = {row['tag_id'] for row in cursor.fetchall()}
+        
+        # Add new tags
+        added_tags = []
+        for tag_name in data['tags']:
+            # Get or create the tag
+            cursor.execute('SELECT id FROM tags WHERE name = ?', (tag_name.lower(),))
+            result = cursor.fetchone()
             
-            # Check if tag exists
-            cursor.execute('SELECT id FROM tags WHERE id = ?', (tag_id,))
-            if not cursor.fetchone():
-                cursor.execute('ROLLBACK')
-                conn.close()
-                return jsonify({'error': f'Tag {tag_id} does not exist'}), 404
+            if result:
+                tag_id = result['id']
+            else:
+                # Create new tag if it doesn't exist
+                cursor.execute(
+                    'INSERT INTO tags (name, created_at) VALUES (?, ?)',
+                    (tag_name.lower(), datetime.now())
+                )
+                tag_id = cursor.lastrowid
             
-            # Add tag to event
-            cursor.execute('''
-                INSERT OR REPLACE INTO event_tags (event_id, tag_id, confidence)
-                VALUES (?, ?, ?)
-            ''', (event_id, tag_id, confidence))
+            # Add tag to event if not already tagged
+            if tag_id not in existing_tag_ids:
+                cursor.execute(
+                    'INSERT INTO event_tags (event_id, tag_id) VALUES (?, ?)',
+                    (event_id, tag_id)
+                )
+                added_tags.append(tag_name.lower())
         
-        cursor.execute('COMMIT')
-        
-        # Get updated tags
-        cursor.execute('''
-            SELECT t.*, et.confidence
-            FROM tags t
-            JOIN event_tags et ON t.id = et.tag_id
-            WHERE et.event_id = ?
-        ''', (event_id,))
-        
-        tags = [dict(row) for row in cursor.fetchall()]
+        conn.commit()
         conn.close()
-        return jsonify(tags)
+        return jsonify({'message': f'Added tags: {", ".join(added_tags)}'}), 201
         
     except Exception as e:
-        cursor.execute('ROLLBACK')
+        conn.rollback()
         conn.close()
         return jsonify({'error': str(e)}), 500
 

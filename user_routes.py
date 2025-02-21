@@ -13,40 +13,30 @@ user_bp = Blueprint('users', __name__)
 JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key')
 
 def get_db():
-    conn = sqlite3.connect('database/database.db')
+    conn = sqlite3.connect('database/events.db')
     conn.row_factory = sqlite3.Row
     return conn
 
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')
-        
-        if not token:
-            return jsonify({'error': 'Token is required'}), 401
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({'error': 'Authorization header is missing'}), 401
             
         try:
-            token = token.split('Bearer ')[1]
+            # Handle both "Bearer <token>" and plain token formats
+            token = auth_header.split('Bearer ')[-1].strip()
             data = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
             user_id = data['user_id']
-            
-            # Verify user exists
-            conn = get_db()
-            cursor = conn.cursor()
-            cursor.execute('SELECT id FROM users WHERE id = ?', (user_id,))
-            user = cursor.fetchone()
-            conn.close()
-            
-            if not user:
-                return jsonify({'error': 'Invalid user'}), 401
-                
-            # Add user_id to kwargs
-            kwargs['user_id'] = user_id
-            return f(*args, **kwargs)
-            
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Your session has expired. Please log in again.'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Invalid token. Please log in again.'}), 401
         except Exception as e:
-            return jsonify({'error': 'Invalid token'}), 401
-            
+            return jsonify({'error': str(e)}), 401
+        
+        return f(user_id, *args, **kwargs)
     return decorated
 
 def validate_email(email):
@@ -119,7 +109,7 @@ def register():
         
         token = jwt.encode(
             {'user_id': user_id},
-            os.getenv('JWT_SECRET', 'dev-secret-key'),
+            JWT_SECRET,
             algorithm='HS256'
         )
         
@@ -141,6 +131,14 @@ def register():
 @user_bp.route('/api/users/login', methods=['POST'])
 def login():
     data = request.get_json()
+    print("Login attempt with data:", data)  # Debug log
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+        
+    if 'email' not in data or 'password' not in data:
+        return jsonify({'error': 'Email and password are required'}), 400
+    
     conn = get_db()
     cursor = conn.cursor()
     
@@ -148,15 +146,22 @@ def login():
         cursor.execute('SELECT * FROM users WHERE email = ?', (data['email'],))
         user = cursor.fetchone()
         
-        if not user or not bcrypt.checkpw(data['password'].encode('utf-8'), user['password_hash']):
+        if not user:
+            print(f"No user found with email: {data['email']}")  # Debug log
+            return jsonify({'error': 'Invalid email or password'}), 401
+            
+        stored_hash = user['password_hash'].encode('utf-8')  # Encode the stored hash
+        if not bcrypt.checkpw(data['password'].encode('utf-8'), stored_hash):
+            print("Password verification failed")  # Debug log
             return jsonify({'error': 'Invalid email or password'}), 401
         
         token = jwt.encode(
             {'user_id': user['id']},
-            os.getenv('JWT_SECRET', 'dev-secret-key'),
+            JWT_SECRET,
             algorithm='HS256'
         )
         
+        print(f"Login successful for user: {user['email']}")  # Debug log
         return jsonify({
             'token': token,
             'user': {
@@ -167,6 +172,7 @@ def login():
         })
         
     except Exception as e:
+        print(f"Login error: {str(e)}")  # Debug log
         return jsonify({'error': str(e)}), 400
     finally:
         conn.close()

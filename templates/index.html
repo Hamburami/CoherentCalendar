@@ -45,6 +45,10 @@
                     <i class="fas fa-plus"></i>
                     Add Event
                 </button>
+                <button id="tagPreferencesBtn" class="sidebar-btn auth-required">
+                    <i class="fas fa-heart"></i>
+                    Event Preferences
+                </button>
                 <button id="scraperBtn" class="sidebar-btn">
                     <i class="fas fa-download"></i>
                     Event Scraper
@@ -84,6 +88,7 @@
             <div id="event-details" class="event-details hidden">
                 <button id="close-button" class="close-button">&times;</button>
                 <div id="event-content"></div>
+                <div id="event-tags" class="event-tags"></div>
                 <div class="event-actions">
                     <button class="edit-button">Edit</button>
                     <button class="delete-button">Delete</button>
@@ -218,7 +223,6 @@
                                 <!-- Add more sources here -->
                             </div>
                         </div>
-<<<<<<< Updated upstream
                         <button id="scrape-button" class="flow-button">
                             <i class="fas fa-download"></i>
                             Scrape
@@ -237,18 +241,7 @@
                                 <i class="fas fa-brain"></i>
                                 AI Interpret
                             </button>
-=======
-                        <div class="scraper-actions">
-                            <button id="start-scrape" class="submit-btn">Start Scraping</button>
->>>>>>> Stashed changes
                         </div>
-                        <div id="scraper-status" class="scraper-status hidden">
-                            <div class="progress-bar">
-                                <div class="progress"></div>
-                            </div>
-                            <p class="status-text">Scraping in progress...</p>
-                        </div>
-<<<<<<< Updated upstream
                         <div class="scraper-section">
                             <div class="section-header">
                                 <h4>AI Interpretation</h4>
@@ -277,18 +270,54 @@
                                 <i class="fas fa-play"></i>
                                 Execute SQL
                             </button>
-=======
-                        <div id="scraper-results" class="scraper-results hidden">
-                            <h4>Results</h4>
-                            <div class="results-content"></div>
->>>>>>> Stashed changes
                         </div>
                     </div>
+                    <div id="scraper-status" class="scraper-status hidden">
+                        <div class="progress-bar">
+                            <div class="progress"></div>
+                        </div>
+                        <p class="status-text">Scraping in progress...</p>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Tag Preferences Modal -->
+            <div id="tag-preferences-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button id="close-tag-preferences-modal" class="close-button">&times;</button>
+                    <h3>Event Preferences</h3>
+                    <div class="tag-preferences-container">
+                        <div id="current-tag-card" class="tag-card">
+                            <h4 class="tag-name"></h4>
+                            <div class="tag-sample-events"></div>
+                        </div>
+                        <div class="tag-actions">
+                            <button id="dislike-tag" class="action-button dislike">
+                                <i class="fas fa-times"></i>
+                                Not Interested
+                            </button>
+                            <button id="like-tag" class="action-button like">
+                                <i class="fas fa-heart"></i>
+                                Interested
+                            </button>
+                        </div>
+                    </div>
+                    <div id="recommended-events" class="recommended-events">
+                        <h4>Recommended Events</h4>
+                        <div class="recommended-events-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommended Events Section -->
+            <div id="recommended-events" class="recommended-events hidden">
+                <h3>Recommended Events</h3>
+                <div class="recommended-events-list"></div>
             </div>
         </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tag_preferences.js') }}"></script>
 </body>
 </html>

@@ -191,25 +191,22 @@ IMPORTANT:
 
 @scraper_bp.route('/eventsql', methods=['POST'])
 def eventsql() -> Dict[str, Any]:
-    """Convert interpreted event information to SQL commands."""
+    """Convert interpreted event information to SQL commands, checking for duplicates first."""
     try:
         data = request.get_json()
         text = data.get('text', '')
-        
+
         if not text or not isinstance(text, str):
             return jsonify({'error': 'Text is required and must be a string', 'sql': None})
 
         # Try to extract valid events even from malformed JSON
         events = []
         try:
-            # First try parsing as-is
             data = json.loads(text)
             if isinstance(data, dict) and 'events' in data:
                 events = data['events']
         except json.JSONDecodeError:
-            # If that fails, try to extract individual event objects
             import re
-            # Find all JSON-like objects
             event_pattern = r'{[^{}]*"title"[^{}]*}'
             matches = re.finditer(event_pattern, text)
             for match in matches:
@@ -223,43 +220,56 @@ def eventsql() -> Dict[str, Any]:
         if not events:
             return jsonify({'error': 'No valid events found in the text', 'sql': None})
 
-        # Generate SQL for each event
         sql_commands = []
+        conn = get_db()
+        cursor = conn.cursor()
+
         for event in events:
             if not isinstance(event, dict):
                 continue
-                
-            # Skip events without required fields
+
             if not event.get('date'):
                 continue
 
-            try:
-                # Clean and escape values - ensure all strings are properly quoted
-                title = f"'{event.get('title', 'Untitled Event').replace('\'', '\'\'')}'"
-                date = f"'{event.get('date')}'"  # We know this exists because we checked above
-                time = f"'{event.get('time')}'" if event.get('time') else 'NULL'
-                location = f"'{event.get('location', '').replace('\'', '\'\'')}'" if event.get('location') else 'NULL'
-                description = f"'{event.get('description', '').replace('\'', '\'\'')}'" if event.get('description') else 'NULL'
-                url = f"'{event.get('url', '').replace('\'', '\'\'')}'" if event.get('url') else 'NULL'
-                needs_review = '0'  # Set to not need review
-                source = "'scraper'"
-                source_id = 'NULL'
-                
-                # Build the SQL command with all values properly quoted
-                sql = f"""INSERT INTO events (title, date, time, location, description, url, needs_review, source, source_id) VALUES ({title}, {date}, {time}, {location}, {description}, {url}, {needs_review}, {source}, {source_id});"""
-                sql_commands.append(sql)
-            except:
-                # Skip any events that cause errors
-                continue
-            
+            # Function to escape single quotes in SQL
+            def escape_sql(value):
+                return value.replace("'", "''") if value else ""
+
+            title_cleaned = escape_sql(event.get('title', 'Untitled Event'))
+            date_cleaned = event.get('date')
+
+            # Check if the event already exists (same title & date)
+            cursor.execute(
+                "SELECT COUNT(*) FROM events WHERE title = ? AND date = ?",
+                (title_cleaned, date_cleaned),
+            )
+            if cursor.fetchone()[0] > 0:
+                print(f"Skipping duplicate event: {title_cleaned} on {date_cleaned}")
+                continue  # Skip duplicate events
+
+            time = f"'{event.get('time')}'" if event.get('time') else 'NULL'
+            location = f"'{escape_sql(event.get('location', ''))}'" if event.get('location') else 'NULL'
+            description = f"'{escape_sql(event.get('description', ''))}'" if event.get('description') else 'NULL'
+            url = f"'{escape_sql(event.get('url', ''))}'" if event.get('url') else 'NULL'
+            needs_review = '0'
+            source = "'scraper'"
+            source_id = 'NULL'
+
+            # Build SQL Insert Statement
+            sql = f"""
+            INSERT INTO events (title, date, time, location, description, url, needs_review, source, source_id)
+            VALUES ('{title_cleaned}', '{date_cleaned}', {time}, {location}, {description}, {url}, {needs_review}, {source}, {source_id});
+            """
+            sql_commands.append(sql)
+
+        conn.close()
+
         if not sql_commands:
-            return jsonify({'error': 'No valid events could be converted to SQL', 'sql': None})
-            
-        # Join commands and return
+            return jsonify({'error': 'No new events to insert (all duplicates)', 'sql': None})
+
         final_sql = '\n'.join(sql_commands)
-        print(f"Generated SQL: {final_sql}")  # Debug log
         return jsonify({'sql': final_sql, 'error': None})
-            
+
     except Exception as e:
         import traceback
         print("Error in eventsql:", str(e))

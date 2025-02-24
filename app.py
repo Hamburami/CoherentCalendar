@@ -100,8 +100,18 @@ def create_app(test_config=None):
         
         conn = get_db()
         cursor = conn.cursor()
-        
+
         try:
+            # Check if event already exists
+            cursor.execute(
+                "SELECT COUNT(*) FROM events WHERE title = ? AND date = ?",
+                (data['title'], data['date'])
+            )
+            if cursor.fetchone()[0] > 0:
+                conn.close()
+                return jsonify({'error': 'Duplicate event: An event with the same title and date already exists'}), 409
+
+            # Insert the new event
             cursor.execute('''
                 INSERT INTO events (title, date, time, location, description, url, needs_review, source, source_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -112,20 +122,20 @@ def create_app(test_config=None):
                 data.get('location', ''),
                 data.get('description', ''),
                 data.get('url', ''),
-                1,
+                1,  # Mark as needing review
                 'manual',
                 None
             ))
-            
+
             conn.commit()
             new_event_id = cursor.lastrowid
-            
+
             # Fetch the newly created event
             cursor.execute('SELECT * FROM events WHERE id = ?', (new_event_id,))
             event = cursor.fetchone()
-            
+
             conn.close()
-            
+
             return jsonify({
                 'id': event['id'],
                 'title': event['title'],
@@ -138,7 +148,7 @@ def create_app(test_config=None):
                 'source': event['source'],
                 'source_id': event['source_id']
             }), 201
-            
+
         except Exception as e:
             conn.close()
             print('Error adding event:', str(e))  

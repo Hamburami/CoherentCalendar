@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
+    <!-- Overlay -->
+    <div id="overlay" class="overlay hidden"></div>
+    
     <div class="container">
         <button id="sidebarToggle" class="sidebar-toggle">
             <i class="fas fa-bars"></i>
@@ -41,6 +44,10 @@
                 <button id="addEventBtn" class="sidebar-btn">
                     <i class="fas fa-plus"></i>
                     Add Event
+                </button>
+                <button id="tagPreferencesBtn" class="sidebar-btn auth-required">
+                    <i class="fas fa-heart"></i>
+                    Event Preferences
                 </button>
                 <button id="scraperBtn" class="sidebar-btn">
                     <i class="fas fa-download"></i>
@@ -77,14 +84,11 @@
                 <div id="calendar-grid"></div>
             </div>
 
-            <div class="calendar-footer">
-                <button id="scrapeTridentBtn" class="scrape-btn">Scrape Trident</button>
-            </div>
-
             <!-- Event Details Modal -->
             <div id="event-details" class="event-details hidden">
                 <button id="close-button" class="close-button">&times;</button>
                 <div id="event-content"></div>
+                <div id="event-tags" class="event-tags"></div>
                 <div class="event-actions">
                     <button class="edit-button">Edit</button>
                     <button class="delete-button">Delete</button>
@@ -189,7 +193,7 @@
                             </small>
                         </div>
                         <div class="form-group">
-                            <label for="register-confirm-password">Confirm Password</label>
+                            <label for="register-confirm-password">Password</label>
                             <input type="password" id="register-confirm-password" required>
                         </div>
                         <button type="submit" class="submit-btn">Create Account</button>
@@ -201,33 +205,6 @@
                 </div>
             </div>
 
-            <!-- User Profile Modal -->
-            <div id="profile-modal" class="modal hidden">
-                <div class="modal-content">
-                    <button id="close-profile-modal" class="close-button">&times;</button>
-                    <h3>Your Profile</h3>
-                    <div class="profile-content">
-                        <div class="user-info">
-                            <h4 id="profile-username"></h4>
-                            <p id="profile-email"></p>
-                        </div>
-                        <div class="preferences-section">
-                            <h4>Event Preferences</h4>
-                            <div id="tag-preferences" class="tag-grid">
-                                <!-- Tag preferences will be populated here -->
-                            </div>
-                        </div>
-                        <div class="interaction-stats">
-                            <h4>Your Activity</h4>
-                            <div id="user-stats">
-                                <!-- User stats will be populated here -->
-                            </div>
-                        </div>
-                        <button id="logout-btn" class="submit-btn">Logout</button>
-                    </div>
-                </div>
-            </div>
-
             <!-- Scraper Modal -->
             <div id="scraper-modal" class="modal hidden">
                 <div class="modal-content scraper-content">
@@ -235,10 +212,16 @@
                         <h3>Event Scraper</h3>
                         <button id="close-scraper-modal" class="close-button">&times;</button>
                     </div>
-                    <div class="url-input-container">
-                        <div class="input-group">
-                            <i class="fas fa-link input-icon"></i>
-                            <input type="url" id="scraper-url" placeholder="Enter URL to scrape">
+                    <div class="scraper-body">
+                        <div class="scraper-options">
+                            <h4>Available Sources</h4>
+                            <div class="source-list">
+                                <div class="source-item">
+                                    <input type="checkbox" id="source-trident" value="trident">
+                                    <label for="source-trident">Trident Cafe</label>
+                                </div>
+                                <!-- Add more sources here -->
+                            </div>
                         </div>
                         <button id="scrape-button" class="flow-button">
                             <i class="fas fa-download"></i>
@@ -258,9 +241,6 @@
                                 <i class="fas fa-brain"></i>
                                 AI Interpret
                             </button>
-                        </div>
-                        <div class="flow-arrow">
-                            <i class="fas fa-arrow-right"></i>
                         </div>
                         <div class="scraper-section">
                             <div class="section-header">
@@ -292,13 +272,52 @@
                             </button>
                         </div>
                     </div>
+                    <div id="scraper-status" class="scraper-status hidden">
+                        <div class="progress-bar">
+                            <div class="progress"></div>
+                        </div>
+                        <p class="status-text">Scraping in progress...</p>
+                    </div>
                 </div>
             </div>
 
-            <div id="overlay" class="overlay hidden"></div>
+            <!-- Tag Preferences Modal -->
+            <div id="tag-preferences-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button id="close-tag-preferences-modal" class="close-button">&times;</button>
+                    <h3>Event Preferences</h3>
+                    <div class="tag-preferences-container">
+                        <div id="current-tag-card" class="tag-card">
+                            <h4 class="tag-name"></h4>
+                            <div class="tag-sample-events"></div>
+                        </div>
+                        <div class="tag-actions">
+                            <button id="dislike-tag" class="action-button dislike">
+                                <i class="fas fa-times"></i>
+                                Not Interested
+                            </button>
+                            <button id="like-tag" class="action-button like">
+                                <i class="fas fa-heart"></i>
+                                Interested
+                            </button>
+                        </div>
+                    </div>
+                    <div id="recommended-events" class="recommended-events">
+                        <h4>Recommended Events</h4>
+                        <div class="recommended-events-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommended Events Section -->
+            <div id="recommended-events" class="recommended-events hidden">
+                <h3>Recommended Events</h3>
+                <div class="recommended-events-list"></div>
+            </div>
         </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tag_preferences.js') }}"></script>
 </body>
 </html>

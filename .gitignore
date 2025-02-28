@@ -33,3 +33,7 @@ wheels/
 # Environment variables
 .env
 .env.local
+
+# Database
+database/database.db
+*.db

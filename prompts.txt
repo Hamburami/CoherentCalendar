@@ -14,3 +14,27 @@ Implementing Admin functionality - Harrison 2/5 10:45pm:
 
 "Put a button in the top top right corner that says "Admin Access". When the button is pressed it should prompt for a password, the admin password is "future" (Briefly explain how you implemented the password checking feature and how to update the password in the future) If the password is implemented correctly the website enters admin mode and the color scheme should change to a red hue. 
 When in admin mode, the user can click on events and has an option to delete them which updates the databse accordingly.
+
+
+
+Gemini API call - Harrison 2/17 9:50am:
+
+"Provided is a scraped website, your job is to pick out all the events, Identify the title, date, time, location, description and output them all in this format: 
+
+{
+    "text": "{
+        \"events\": [
+            {
+                \"title\": \"Event Title\",
+                \"date\": \"2025-02-17\",
+                \"time\": \"14:00\",
+                \"location\": \"Event Location\",
+                \"description\": \"Event Description\",
+                \"url\": \"https://example.com\",
+                \"status\": \"pending\"
+            }
+        ]
+    }"
+}
+
+with no other text outputted. Thanks!"

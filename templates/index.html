@@ -12,6 +12,7 @@
     <div id="overlay" class="overlay hidden"></div>
     
     <div class="container">
+        <div id="message-container"></div>
         <button id="sidebarToggle" class="sidebar-toggle">
             <i class="fas fa-bars"></i>
         </button>
@@ -24,36 +25,36 @@
             <div class="sidebar-content">
                 <!-- Auth Buttons -->
                 <div class="auth-hide">
-                    <button id="loginBtn" class="sidebar-btn">
+                    <button id="login-button" class="sidebar-btn">
                         <i class="fas fa-sign-in-alt"></i>
                         Login
                     </button>
-                    <button id="registerBtn" class="sidebar-btn">
+                    <button id="register-button" class="sidebar-btn">
                         <i class="fas fa-user-plus"></i>
                         Register
                     </button>
                 </div>
                 
                 <!-- Profile Button (visible when logged in) -->
-                <button id="profileBtn" class="sidebar-btn auth-required">
+                <button id="profile-button" class="sidebar-btn auth-required">
                     <i class="fas fa-user"></i>
                     My Profile
                 </button>
 
                 <!-- Event Management -->
-                <button id="addEventBtn" class="sidebar-btn">
+                <button id="add-event-button" class="sidebar-btn">
                     <i class="fas fa-plus"></i>
                     Add Event
                 </button>
-                <button id="tagPreferencesBtn" class="sidebar-btn auth-required">
-                    <i class="fas fa-heart"></i>
+                <button id="preferences-button" class="sidebar-btn auth-required hidden">
+                    <i class="fas fa-tags"></i>
                     Event Preferences
                 </button>
-                <button id="scraperBtn" class="sidebar-btn">
+                <button id="scraper-button" class="sidebar-btn">
                     <i class="fas fa-download"></i>
                     Event Scraper
                 </button>
-                <button id="adminAccessBtn" class="sidebar-btn">
+                <button id="admin-button" class="sidebar-btn">
                     <i class="fas fa-lock"></i>
                     Admin Access
                 </button>
@@ -64,109 +65,126 @@
         <div class="main-content">
             <header>
                 <h1>Coherent Calendar</h1>
-                <div class="calendar-controls">
-                    <button id="prevMonth">&lt;</button>
-                    <h2 id="currentMonth"></h2>
-                    <button id="nextMonth">&gt;</button>
-                </div>
             </header>
 
-            <div class="calendar">
-                <div class="weekdays">
-                    <div>Sun</div>
-                    <div>Mon</div>
-                    <div>Tue</div>
-                    <div>Wed</div>
-                    <div>Thu</div>
-                    <div>Fri</div>
-                    <div>Sat</div>
+            <!-- Preferences Container -->
+            <div id="preferences-container" class="preferences-container">
+                <h2>Event Preferences</h2>
+                <div class="preferences-content">
+                    <!-- Preferences will be loaded here -->
                 </div>
-                <div id="calendar-grid"></div>
+            </div>
+
+            <div class="calendar">
+                <div class="calendar-header">
+                    <button id="prevMonth" class="nav-button">&lt;</button>
+                    <h2 id="currentMonth"></h2>
+                    <button id="nextMonth" class="nav-button">&gt;</button>
+                </div>
+                <table class="calendar-table">
+                    <thead>
+                        <tr>
+                            <th>Sun</th>
+                            <th>Mon</th>
+                            <th>Tue</th>
+                            <th>Wed</th>
+                            <th>Thu</th>
+                            <th>Fri</th>
+                            <th>Sat</th>
+                        </tr>
+                    </thead>
+                    <tbody class="calendar-body">
+                    </tbody>
+                </table>
             </div>
 
             <!-- Event Details Modal -->
-            <div id="event-details" class="event-details hidden">
-                <button id="close-button" class="close-button">&times;</button>
-                <div id="event-content"></div>
-                <div id="event-tags" class="event-tags"></div>
-                <div class="event-actions">
-                    <button class="edit-button">Edit</button>
-                    <button class="delete-button">Delete</button>
-                    <button class="approve-button hidden">Approve</button>
-                    <button class="flag-button hidden">Flag for Review</button>
+            <div id="event-details" class="modal event-details">
+                <div class="modal-content">
+                    <button class="close-button">&times;</button>
+                    <div id="event-content"></div>
+                    <div id="event-tags" class="event-tags"></div>
+                    <div class="admin-buttons hidden">
+                        <button class="btn edit-button">Edit</button>
+                        <button class="btn delete-button">Delete</button>
+                        <button class="btn approve-button hidden">Approve</button>
+                        <button class="btn flag-button hidden">Flag for Review</button>
+                    </div>
                 </div>
             </div>
 
             <!-- Add Event Modal -->
-            <div id="add-event-modal" class="modal hidden">
+            <div id="add-event-modal" class="modal add-event-modal">
                 <div class="modal-content">
-                    <button id="close-modal-button" class="close-button">&times;</button>
-                    <h3>Add New Event</h3>
+                    <button id="close-add-event-modal" class="close-button">&times;</button>
+                    <div class="modal-header">
+                        <h3>Add New Event</h3>
+                    </div>
                     <form id="add-event-form">
-                        <div class="form-group">
-                            <label for="event-title">Event Name*</label>
-                            <input type="text" id="event-title" required>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="event-title">Event Title</label>
+                                <input type="text" id="event-title" name="title" required>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="event-date">Date*</label>
-                            <input type="date" id="event-date" required autocomplete="off">
-                        </div>
-                        <div class="form-group">
-                            <label for="event-time">Time</label>
-                            <input type="time" id="event-time">
-                        </div>
-                        <div class="form-group">
-                            <label for="event-location">Location</label>
-                            <input type="text" id="event-location">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="event-date">Date</label>
+                                <input type="date" id="event-date" name="date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="event-time">Time</label>
+                                <input type="time" id="event-time" name="time">
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="event-description">Description</label>
-                            <textarea id="event-description"></textarea>
+                            <textarea id="event-description" name="description" rows="4"></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="event-url">URL</label>
-                            <input type="url" id="event-url" placeholder="https://example.com">
+                            <label>Tags</label>
+                            <div class="tag-selection">
+                                <!-- Tags will be loaded dynamically -->
+                            </div>
                         </div>
-                        <button type="submit" class="submit-btn">Add Event</button>
+                        <button type="submit" class="btn">Add Event</button>
                     </form>
                 </div>
             </div>
 
             <!-- Admin Modal -->
-            <div id="admin-modal" class="modal hidden">
+            <div id="admin-modal" class="modal">
                 <div class="modal-content">
                     <button id="close-admin-modal" class="close-button">&times;</button>
-                    <h3>Admin Access</h3>
+                    <div class="modal-header">
+                        <h3>Admin Access</h3>
+                    </div>
                     <form id="admin-form">
                         <div class="form-group">
                             <label for="admin-password">Password</label>
-                            <input type="password" id="admin-password" required>
+                            <input type="password" id="admin-password" name="password" required>
                         </div>
-                        <button type="submit" class="submit-btn">Login</button>
+                        <button type="submit" class="btn">Login</button>
                     </form>
                 </div>
             </div>
 
             <!-- User Authentication Modals -->
             <!-- Login Modal -->
-            <div id="login-modal" class="modal hidden">
+            <div id="login-modal" class="modal">
                 <div class="modal-content">
                     <button id="close-login-modal" class="close-button">&times;</button>
                     <h3>Login</h3>
-                    <form id="login-form">
+                    <form id="login-form" onsubmit="calendar.handleLogin(event)">
                         <div class="form-group">
-                            <label for="login-email">Email</label>
-                            <input type="email" id="login-email" required>
+                            <label for="login-email">Email:</label>
+                            <input type="email" id="login-email" name="email" required>
                         </div>
                         <div class="form-group">
-                            <label for="login-password">Password</label>
-                            <input type="password" id="login-password" required>
+                            <label for="login-password">Password:</label>
+                            <input type="password" id="login-password" name="password" required>
                         </div>
-                        <button type="submit" class="submit-btn">Login</button>
-                        <p class="form-footer">
-                            Don't have an account? 
-                            <a href="#" id="switch-to-register">Register here</a>
-                        </p>
+                        <button type="submit" class="btn">Login</button>
                     </form>
                 </div>
             </div>
@@ -206,12 +224,9 @@
             </div>
 
             <!-- Scraper Modal -->
-            <div id="scraper-modal" class="modal hidden">
-                <div class="modal-content scraper-content">
-                    <div class="modal-header">
-                        <h3>Event Scraper</h3>
-                        <button id="close-scraper-modal" class="close-button">&times;</button>
-                    </div>
+            <div id="scraper-modal" class="modal scraper-modal">
+                <div class="modal-content">
+                    <button id="close-scraper-modal" class="close-button">&times;</button>
                     <div class="scraper-body">
                         <div class="scraper-options">
                             <h4>Available Sources</h4>
@@ -223,10 +238,21 @@
                                 <!-- Add more sources here -->
                             </div>
                         </div>
+<<<<<<< Updated upstream
                         <button id="scrape-button" class="flow-button">
                             <i class="fas fa-download"></i>
                             Scrape
                         </button>
+=======
+                        <div class="url-input">
+                            <label for="scraper-url">Custom URL:</label>
+                            <input type="text" id="scraper-url" placeholder="Enter URL to scrape">
+                            <button id="scrape-button" class="btn">
+                                <i class="fas fa-download"></i>
+                                Scrape URL
+                            </button>
+                        </div>
+>>>>>>> Stashed changes
                     </div>
                     <div class="scraper-flow">
                         <div class="scraper-section">
@@ -237,20 +263,32 @@
                             <div class="textbox-container">
                                 <textarea id="scrape-output" class="flow-textbox"></textarea>
                             </div>
-                            <button id="interpret-button" class="flow-button">
+                            <button id="interpret-button" class="btn" disabled>
                                 <i class="fas fa-brain"></i>
                                 AI Interpret
                             </button>
                         </div>
+<<<<<<< Updated upstream
+=======
+                        <div class="flow-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+>>>>>>> Stashed changes
                         <div class="scraper-section">
                             <div class="section-header">
                                 <h4>AI Interpretation</h4>
                                 <div class="step-number">2</div>
                             </div>
                             <div class="textbox-container">
+<<<<<<< Updated upstream
                                 <textarea id="interpret-output" class="flow-textbox"></textarea>
                             </div>
                             <button id="tosql-button" class="flow-button">
+=======
+                                <textarea id="interpret-output" class="flow-textbox" readonly></textarea>
+                            </div>
+                            <button id="tosql-button" class="btn" disabled>
+>>>>>>> Stashed changes
                                 <i class="fas fa-database"></i>
                                 To SQL
                             </button>
@@ -264,19 +302,33 @@
                                 <div class="step-number">3</div>
                             </div>
                             <div class="textbox-container">
+<<<<<<< Updated upstream
                                 <textarea id="sql-output" class="flow-textbox"></textarea>
                             </div>
                             <button id="execute-sql-button" class="flow-button">
+=======
+                                <textarea id="sql-output" class="flow-textbox" readonly></textarea>
+                            </div>
+                            <button id="execute-sql-button" class="btn" disabled>
+>>>>>>> Stashed changes
                                 <i class="fas fa-play"></i>
                                 Execute SQL
                             </button>
                         </div>
                     </div>
+<<<<<<< Updated upstream
                     <div id="scraper-status" class="scraper-status hidden">
                         <div class="progress-bar">
                             <div class="progress"></div>
                         </div>
                         <p class="status-text">Scraping in progress...</p>
+=======
+                    <div id="scraper-status" class="scraper-status">
+                        <div class="progress-bar">
+                            <div class="progress"></div>
+                        </div>
+                        <p class="status-text">Ready to scrape...</p>
+>>>>>>> Stashed changes
                     </div>
                 </div>
             </div>
@@ -319,5 +371,11 @@
 
     <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tag_preferences.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            window.calendar = new Calendar();
+        });
+    </script>
 </body>
 </html>

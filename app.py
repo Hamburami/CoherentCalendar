@@ -1,10 +1,14 @@
-from flask import Flask, render_template, jsonify, send_from_directory, request
+from flask import Flask, render_template, jsonify, send_from_directory, request, g
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import sys
 import bcrypt
 import jwt
+import json
+import requests
+from bs4 import BeautifulSoup
+import re
 from scrapers.scraper_manager import ScraperManager
 
 
@@ -22,89 +26,123 @@ def create_app(test_config=None):
     else:
         app.config.update(test_config)
 
-    # Ensure instance folder exists
     try:
         os.makedirs(app.instance_path)
     except OSError:
         pass
 
     # Initialize database
-    with app.app_context():
-        init_db()
-    
-    # Register blueprints
+    init_db()
+
+    @app.route('/api/admin/verify', methods=['POST'])
+    def verify_admin():
+        data = request.get_json()
+        if not data or 'password' not in data:
+            return jsonify({'message': 'Password is required'}), 400
+            
+        password = data['password']
+        if password == 'admin123':  
+            return jsonify({'message': 'Admin access granted'}), 200
+        else:
+            return jsonify({'message': 'Invalid password'}), 401
+
+    @app.route('/api/preferences', methods=['GET'])
+    def get_preferences():
+        # Placeholder for actual user preferences
+        preferences = {
+            'eventColor': '#4CAF50',
+            'reminderTime': '30',
+            'defaultView': 'month'
+        }
+        return jsonify(preferences)
+
+    # Register blueprints and other routes
     from scraper_routes import scraper_bp
     from user_routes import user_bp
     from tag_routes import tag_bp
     from preference_routes import preference_bp
+<<<<<<< Updated upstream
     app.register_blueprint(user_bp)
     app.register_blueprint(scraper_bp)
     app.register_blueprint(tag_bp)
     app.register_blueprint(preference_bp)
+=======
+    
+    app.register_blueprint(user_bp, url_prefix='/api/users')
+    app.register_blueprint(scraper_bp, url_prefix='/api')
+    app.register_blueprint(tag_bp, url_prefix='/api/tags')
+    app.register_blueprint(preference_bp, url_prefix='/api/preferences')
+>>>>>>> Stashed changes
 
     @app.route('/')
     def index():
-        app.logger.info('Serving index.html')
         return render_template('index.html')
 
     @app.route('/static/<path:path>')
     def serve_static(path):
-        app.logger.info(f'Serving static file: {path}')
         return send_from_directory('static', path)
 
     @app.route('/api/events/<int:year>/<int:month>')
     def get_events(year, month):
-        start_date = f"{year}-{month:02d}-01"
-        if month == 12:
-            end_date = f"{year + 1}-01-01"
-        else:
-            end_date = f"{year}-{month + 1:02d}-01"
-        
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        is_admin = request.args.get('admin', 'false').lower() == 'true'
-        
-        if is_admin:
-            cursor.execute(
-                "SELECT * FROM events WHERE date >= ? AND date < ?",
-                (start_date, end_date)
-            )
-        else:
-            cursor.execute(
-                "SELECT * FROM events WHERE date >= ? AND date < ? AND needs_review = 0",
-                (start_date, end_date)
-            )
-        
-        events = []
-        for row in cursor.fetchall():
-            # Get tags for this event
-            cursor.execute('''
-                SELECT t.*
-                FROM tags t
-                JOIN event_tags et ON t.id = et.tag_id
-                WHERE et.event_id = ?
-                ORDER BY t.name
-            ''', (row['id'],))
+        try:
+            admin = request.args.get('admin', 'false').lower() == 'true'
             
-            tags = [dict(tag) for tag in cursor.fetchall()]
+            # Get start and end dates for the month
+            start_date = f"{year}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year + 1}-01-01"
+            else:
+                end_date = f"{year}-{month + 1:02d}-01"
             
-            events.append({
-                'id': row['id'],
-                'title': row['title'],
-                'date': row['date'],
-                'time': row['time'],
-                'location': row['location'],
-                'description': row['description'],
-                'url': row['url'],
-                'needs_review': bool(row['needs_review']),
-                'source': row['source'],
-                'source_id': row['source_id'],
-                'tags': tags
-            })
-        
-        conn.close()
-        return jsonify(events)
+            db = get_db()
+            cursor = db.cursor()
+            
+            # Get all events for the month
+            query = """
+                SELECT e.id, e.title, e.date, e.description, e.location, e.needs_review
+                FROM events e
+                WHERE e.date >= ? AND e.date < ?
+                ORDER BY e.date, e.title
+            """
+            cursor.execute(query, (start_date, end_date))
+            events = []
+            
+            for row in cursor.fetchall():
+                event = {
+                    'id': row[0],
+                    'title': row[1],
+                    'date': row[2],
+                    'description': row[3],
+                    'location': row[4],
+                    'needs_review': bool(row[5])
+                }
+                
+                # Only show needs_review status to admins
+                if not admin:
+                    event.pop('needs_review', None)
+                
+                events.append(event)
+            
+            return jsonify(events)
+            
+        except Exception as e:
+            print(f"Error getting events: {str(e)}")
+            return jsonify({'error': 'Failed to get events'}), 500
+
+    def get_db():
+        if 'db' not in g:
+            g.db = sqlite3.connect(
+                os.path.join('database', 'database.db'),
+                detect_types=sqlite3.PARSE_DECLTYPES
+            )
+            g.db.row_factory = sqlite3.Row
+        return g.db
+
+    @app.teardown_appcontext
+    def close_db(e=None):
+        db = g.pop('db', None)
+        if db is not None:
+            db.close()
 
     @app.route('/api/events', methods=['POST'])
     def add_event():
@@ -282,7 +320,6 @@ def create_app(test_config=None):
                 'event_count': event_count
             })
         except Exception as e:
-            app.logger.error(f'Error during scraping: {str(e)}')
             return jsonify({
                 'error': 'Failed to scrape events',
                 'details': str(e)
@@ -320,6 +357,7 @@ def init_db():
         print(f"Error initializing database: {str(e)}")
         raise
 
+<<<<<<< Updated upstream
 def get_db():
     db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
     conn = sqlite3.connect(db_path)
@@ -331,6 +369,8 @@ def get_db():
 
 
 
+=======
+>>>>>>> Stashed changes
 if __name__ == '__main__':
     app = create_app()
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(debug=True)

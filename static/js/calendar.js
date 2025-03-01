@@ -1,25 +1,38 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const calendar = new Calendar();
+    window.calendar = calendar;  // Make calendar accessible globally
+});
+
 class Calendar {
     constructor() {
         this.currentDate = new Date();
-        this.events = [];
         this.isAdmin = false;
-        this.editingEventId = null;
-        this.activePopup = null;
-        this.isAuthenticated = false;
-        this.user = null;
-
-        // Add auth-related handlers to existing bound methods
-        this.handleAddEventBound = this.handleAddEvent.bind(this);
-        this.handleEditEventBound = this.handleEditEvent.bind(this);
-        this.handleLoginBound = this.handleLogin.bind(this);
-        this.handleRegisterBound = this.handleRegister.bind(this);
+        this.events = [];
         
-        this.initializeElements();
-        this.setupEventListeners();
-        this.checkAuthState();
+        // Initialize elements
+        this.currentMonthElement = document.getElementById('currentMonth');
+        this.calendarBody = document.querySelector('.calendar-body');
+        this.prevButton = document.getElementById('prevMonth');
+        this.nextButton = document.getElementById('nextMonth');
+        
+        if (this.prevButton) {
+            this.prevButton.addEventListener('click', () => {
+                this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+                this.renderCalendar(this.isAdmin);
+            });
+        }
+
+        if (this.nextButton) {
+            this.nextButton.addEventListener('click', () => {
+                this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+                this.renderCalendar(this.isAdmin);
+            });
+        }
+
         this.renderCalendar();
     }
 
+<<<<<<< Updated upstream
     initializeElements() {
         this.calendarGrid = document.getElementById('calendar-grid');
         this.currentMonthElement = document.getElementById('currentMonth');
@@ -178,14 +191,167 @@ class Calendar {
     }
 
     async fetchEvents() {
+=======
+    async renderCalendar(adminMode = false) {
+        if (!this.calendarBody || !this.currentMonthElement) return;
+
+        this.isAdmin = adminMode;
+>>>>>>> Stashed changes
         const year = this.currentDate.getFullYear();
-        const month = this.currentDate.getMonth() + 1;
+        const month = this.currentDate.getMonth();
+
+        // Update month display
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+        this.currentMonthElement.textContent = `${monthNames[month]} ${year}`;
+
+        // Clear existing calendar
+        this.calendarBody.innerHTML = '';
+
+        // Get first day and last day of month
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+
+        let currentRow = document.createElement('tr');
+        
+        // Add empty cells for days before first of month
+        for (let i = 0; i < firstDay.getDay(); i++) {
+            const cell = document.createElement('td');
+            cell.classList.add('empty');
+            currentRow.appendChild(cell);
+        }
+
+        // Add days of month
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+            if (currentRow.children.length === 7) {
+                this.calendarBody.appendChild(currentRow);
+                currentRow = document.createElement('tr');
+            }
+
+            const cell = document.createElement('td');
+            const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            cell.dataset.date = date;
+
+            // Add day number
+            const dayNumber = document.createElement('div');
+            dayNumber.classList.add('day-number');
+            dayNumber.textContent = day;
+            cell.appendChild(dayNumber);
+
+            currentRow.appendChild(cell);
+        }
+
+        // Add empty cells for remaining days
+        while (currentRow.children.length < 7) {
+            const cell = document.createElement('td');
+            cell.classList.add('empty');
+            currentRow.appendChild(cell);
+        }
+
+        this.calendarBody.appendChild(currentRow);
+    }
+    
+    initializeUI() {
+        // Initialize admin button
+        const adminButton = document.getElementById('admin-button');
+        if (adminButton) {
+            adminButton.addEventListener('click', () => {
+                const modal = document.getElementById('admin-modal');
+                if (modal) modal.classList.add('visible');
+            });
+        }
+        
+        // Initialize admin form
+        const adminForm = document.getElementById('admin-form');
+        if (adminForm) {
+            adminForm.addEventListener('submit', (e) => this.handleAdminAccess(e));
+        }
+        
+        // Initialize close buttons
+        document.querySelectorAll('.close-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const modal = button.closest('.modal');
+                if (modal) modal.classList.remove('visible');
+            });
+        });
+        
+        // Initialize preferences button
+        const preferencesButton = document.getElementById('preferences-button');
+        if (preferencesButton) {
+            preferencesButton.addEventListener('click', () => {
+                const modal = document.getElementById('preferences-container');
+                if (modal) {
+                    modal.classList.toggle('visible');
+                    if (modal.classList.contains('visible')) {
+                        this.loadUserPreferences();
+                    }
+                }
+            });
+        }
+        
+        // Initialize add event button
+        const addEventButton = document.getElementById('add-event-button');
+        if (addEventButton) {
+            addEventButton.addEventListener('click', () => {
+                const modal = document.getElementById('add-event-modal');
+                if (modal) {
+                    modal.classList.add('visible');
+                    const dateInput = modal.querySelector('#event-date');
+                    if (dateInput) {
+                        dateInput.valueAsDate = new Date();
+                    }
+                }
+            });
+        }
+        
+        // Initialize event form
+        const eventForm = document.getElementById('add-event-form');
+        if (eventForm) {
+            eventForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(eventForm);
+                const data = {
+                    title: formData.get('title'),
+                    date: formData.get('date'),
+                    description: formData.get('description'),
+                    location: formData.get('location')
+                };
+                
+                try {
+                    const response = await fetch('/api/events', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    if (response.ok) {
+                        this.showMessage('Event added successfully!');
+                        const modal = document.getElementById('add-event-modal');
+                        if (modal) modal.classList.remove('visible');
+                        await this.renderCalendar();
+                    } else {
+                        const error = await response.json();
+                        this.showMessage(error.message || 'Failed to add event', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error adding event:', error);
+                    this.showMessage('Failed to add event', 'error');
+                }
+            });
+        }
+    }
+    
+    async fetchEvents(year, month, adminMode = false) {
         try {
-            const response = await fetch(`/api/events/${year}/${month}?admin=${this.isAdmin}`);
+            const response = await fetch(`/api/events/${year}/${month}${adminMode ? '?admin=true' : ''}`);
+            if (!response.ok) throw new Error('Failed to fetch events');
+            
             this.events = await response.json();
         } catch (error) {
             console.error('Error fetching events:', error);
-            this.events = [];
+            this.showMessage('Failed to fetch events', 'error');
         }
     }
 
@@ -205,498 +371,81 @@ class Calendar {
         return dayElement;
     }
 
-    async renderCalendar() {
-        await this.fetchEvents();
+    async showEventDetails(event) {
+        if (!this.eventDetailsModal) return;
         
-        const year = this.currentDate.getFullYear();
-        const month = this.currentDate.getMonth();
-        
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                          'July', 'August', 'September', 'October', 'November', 'December'];
-        this.currentMonthElement.textContent = `${monthNames[month]} ${year}`;
-
-        this.calendarGrid.innerHTML = '';
-
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const totalDays = lastDay.getDate();
-        const startingDay = firstDay.getDay();
-
-        const prevMonthLastDay = new Date(year, month, 0).getDate();
-        for (let i = startingDay - 1; i >= 0; i--) {
-            const dayElement = this.createDayElement(prevMonthLastDay - i, true);
-            this.calendarGrid.appendChild(dayElement);
-        }
-
-        for (let day = 1; day <= totalDays; day++) {
-            const dayElement = this.createDayElement(day, false);
-            const dateStr = this.formatDate(year, month + 1, day);
-            const dayEvents = this.events.filter(event => event.date === dateStr);
-            
-            this.renderEvents(dayElement, dayEvents);
-            
-            this.calendarGrid.appendChild(dayElement);
-        }
-
-        const remainingDays = 42 - (startingDay + totalDays);
-        for (let day = 1; day <= remainingDays; day++) {
-            const dayElement = this.createDayElement(day, true);
-            this.calendarGrid.appendChild(dayElement);
-        }
-    }
-
-    formatDate(year, month, day) {
-        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    }
-
-    formatDisplayDate(dateStr) {
-        const [year, month, day] = dateStr.split('-');
-        return `${parseInt(month)}/${parseInt(day)}/${year}`;
-    }
-
-    renderEvents(dayElement, dayEvents) {
-        const eventsContainer = dayElement.querySelector('.events-container');
-        eventsContainer.innerHTML = '';
-
-        const maxVisibleEvents = 3;
-        const visibleEvents = dayEvents.slice(0, maxVisibleEvents);
-        const remainingEvents = dayEvents.slice(maxVisibleEvents);
-
-        visibleEvents.forEach(event => {
-            const eventElement = document.createElement('div');
-            eventElement.className = 'event';
-            if (event.needs_review) {
-                eventElement.classList.add('needs-review');
-            }
-            if (event.isPersonal) {
-                eventElement.classList.add('personal-event');
-            }
-            eventElement.textContent = event.title;
-            eventElement.addEventListener('click', () => this.showEventDetails(event));
-            if (this.isAdmin) {
-                eventElement.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    this.showEditEventModal(event);
-                });
-            }
-            eventsContainer.appendChild(eventElement);
-        });
-
-        if (remainingEvents.length > 0) {
-            const moreEventsElement = document.createElement('div');
-            moreEventsElement.className = 'more-events';
-            moreEventsElement.textContent = `+ ${remainingEvents.length} more`;
-            moreEventsElement.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.showEventPopup(dayEvents, moreEventsElement);
-            });
-            eventsContainer.appendChild(moreEventsElement);
-        }
-    }
-
-    showAdminModal() {
-        if (this.adminModal) {
-            this.adminModal.classList.remove('hidden');
-            this.overlay.classList.remove('hidden');
-            if (document.getElementById('admin-password')) {
-                document.getElementById('admin-password').value = '';
-            }
-        }
-    }
-
-    hideAdminModal() {
-        if (this.adminModal) {
-            this.adminModal.classList.add('hidden');
-            this.overlay.classList.add('hidden');
-            if (this.adminForm) {
-                this.adminForm.reset();
-            }
-        }
-    }
-
-    async handleAdminLogin(e) {
-        e.preventDefault();
-        const password = document.getElementById('admin-password').value;
-        
-        if (password === 'future') {
-            this.isAdmin = true;
-            document.documentElement.setAttribute('data-admin-mode', 'true');
-            this.hideAdminModal();
-            this.adminAccessBtn.textContent = 'Exit Admin Mode';
-            
-            // Remove all existing listeners before adding new one
-            const newAdminBtn = this.adminAccessBtn.cloneNode(true);
-            this.adminAccessBtn.parentNode.replaceChild(newAdminBtn, this.adminAccessBtn);
-            this.adminAccessBtn = newAdminBtn;
-            this.adminAccessBtn.addEventListener('click', () => this.exitAdminMode());
-            
-            await this.renderCalendar();  // Refresh calendar to show pending events
-        } else {
-            alert('Incorrect password');
-        }
-    }
-
-    async exitAdminMode() {
-        this.isAdmin = false;
-        document.documentElement.setAttribute('data-admin-mode', 'false');
-        this.adminAccessBtn.textContent = 'Admin Access';
-        
-        // Remove all existing listeners before adding new one
-        const newAdminBtn = this.adminAccessBtn.cloneNode(true);
-        this.adminAccessBtn.parentNode.replaceChild(newAdminBtn, this.adminAccessBtn);
-        this.adminAccessBtn = newAdminBtn;
-        this.adminAccessBtn.addEventListener('click', () => this.showAdminModal());
-        
-        await this.renderCalendar();  // Refresh calendar to hide pending events
-    }
-
-    showEventDetails(event) {
         const content = document.getElementById('event-content');
-        const tagsContainer = document.getElementById('event-tags');
-        const approveButton = this.eventDetails.querySelector('.approve-button');
-        const flagButton = this.eventDetails.querySelector('.flag-button');
-        const editButton = this.eventDetails.querySelector('.edit-button');
-        const deleteButton = this.eventDetails.querySelector('.delete-button');
+        const tags = document.getElementById('event-tags');
+        const adminButtons = this.eventDetailsModal.querySelector('.admin-buttons');
         
-        // Clear previous event listeners
-        approveButton.replaceWith(approveButton.cloneNode(true));
-        flagButton.replaceWith(flagButton.cloneNode(true));
-        editButton.replaceWith(editButton.cloneNode(true));
-        deleteButton.replaceWith(deleteButton.cloneNode(true));
-        
-        // Get fresh references
-        const newApproveButton = this.eventDetails.querySelector('.approve-button');
-        const newFlagButton = this.eventDetails.querySelector('.flag-button');
-        const newEditButton = this.eventDetails.querySelector('.edit-button');
-        const newDeleteButton = this.eventDetails.querySelector('.delete-button');
-
-        let detailsHtml = '';
-        if (event.needs_review) {
-            detailsHtml += '<div class="review-badge">Needs Review</div>';
-        }
-        
-        // Format the date properly
-        const [year, month, day] = event.date.split('-');
-        const formattedDate = `${month}/${day}/${year}`;
-        
-        detailsHtml += `
-            <h3>${event.title}</h3>
-            <p><strong>Date:</strong> ${formattedDate}</p>
-            ${event.time ? `<p><strong>Time:</strong> ${event.time}</p>` : ''}
-            ${event.location ? `<p><strong>Location:</strong> ${event.location}</p>` : ''}
-            ${event.description ? `<p><strong>Description:</strong> ${event.description}</p>` : ''}
-            ${event.url ? `<p><strong>URL:</strong> <a href="${event.url}" target="_blank">${event.url}</a></p>` : ''}
-        `;
-        
-        content.innerHTML = detailsHtml;
-
-        // Display tags
-        if (event.tags && event.tags.length > 0) {
-            const tagsHtml = event.tags.map(tag => `
-                <div class="event-tag" style="background-color: ${tag.color || '#808080'}">${tag.name}</div>
-            `).join('');
-            tagsContainer.innerHTML = tagsHtml;
-            tagsContainer.classList.remove('hidden');
-        } else {
-            tagsContainer.innerHTML = '';
-            tagsContainer.classList.add('hidden');
-        }
-        
-        // Show/hide buttons based on admin status and review status
-        if (this.isAdmin) {
-            newApproveButton.classList.toggle('hidden', !event.needs_review);
-            newFlagButton.classList.toggle('hidden', event.needs_review);
-            newEditButton.classList.remove('hidden');
-            newDeleteButton.classList.remove('hidden');
-            
-            // Add event listeners for admin actions
-            newApproveButton.addEventListener('click', () => this.approveEvent(event.id));
-            newFlagButton.addEventListener('click', () => this.flagEvent(event.id));
-            newEditButton.addEventListener('click', () => this.showEditEventModal(event));
-            newDeleteButton.addEventListener('click', () => this.deleteEvent(event.id));
-        } else {
-            newApproveButton.classList.add('hidden');
-            newFlagButton.classList.add('hidden');
-            newEditButton.classList.add('hidden');
-            newDeleteButton.classList.add('hidden');
-        }
-        
-        if (this.eventDetails) {
-            this.eventDetails.classList.remove('hidden');
-        }
-        if (this.overlay) {
-            this.overlay.classList.remove('hidden');
-        }
-    }
-
-    async deleteEvent(eventId) {
-        if (!this.isAdmin) return;
-
-        try {
-            const response = await fetch(`/api/events/${eventId}`, {
-                method: 'DELETE'
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            this.hideEventDetails();
-            await this.renderCalendar();
-        } catch (error) {
-            console.error('Error deleting event:', error);
-            alert('Failed to delete event. Please try again.');
-        }
-    }
-
-    hideEventDetails() {
-        if (this.eventDetails) {
-            this.eventDetails.classList.add('hidden');
-            this.overlay.classList.add('hidden');
-        }
-    }
-
-    showAddEventModal() {
-        this.editingEventId = null;
-        this.addEventForm.reset();
-        this.submitButton.textContent = 'Add Event';
-        if (this.addEventModal) {
-            this.addEventModal.classList.remove('hidden');
-        }
-        if (this.overlay) {
-            this.overlay.classList.remove('hidden');
-        }
-        
-        // Ensure correct event handler
-        this.addEventForm.removeEventListener('submit', this.handleEditEventBound);
-        this.addEventForm.addEventListener('submit', this.handleAddEventBound);
-    }
-
-    hideAddEventModal() {
-        if (this.addEventModal) {
-            this.addEventModal.classList.add('hidden');
-            this.overlay.classList.add('hidden');
-            this.addEventForm.reset();
-            this.editingEventId = null;
-        }
-    }
-
-    hideAllModals() {
-        const modals = [
-            this.eventDetails,
-            this.addEventModal,
-            this.adminModal,
-            this.scraperModal,
-            this.loginModal,
-            this.registerModal,
-            this.profileModal
-        ];
-
-        modals.forEach(modal => {
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        });
-
-        if (this.overlay) {
-            this.overlay.classList.add('hidden');
-        }
-    }
-
-    async handleAddEvent(e) {
-        e.preventDefault();
-        
-        const formData = {
-            title: document.getElementById('event-title').value.trim(),
-            date: document.getElementById('event-date').value,
-            time: document.getElementById('event-time').value || null,
-            location: document.getElementById('event-location').value.trim() || null,
-            description: document.getElementById('event-description').value.trim() || null,
-            url: document.getElementById('event-url').value.trim() || null
-        };
-
-        try {
-            const response = await fetch('/api/events', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            });
-
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || `HTTP error! status: ${response.status}`);
-            }
-
-            // Reset form and hide modal
-            this.addEventForm.reset();
-            this.hideAddEventModal();
-            
-            // Refresh calendar to show new event
-            await this.renderCalendar();
-        } catch (error) {
-            console.error('Error adding event:', error);
-            alert(`Failed to add event: ${error.message}`);
-        }
-    }
-
-    showEditEventModal(event) {
-        this.editingEventId = event.id;
-        if (this.addEventModal) {
-            this.addEventModal.classList.remove('hidden');
-        }
-        if (this.overlay) {
-            this.overlay.classList.remove('hidden');
-        }
-        
-        // Populate form with event data
-        document.getElementById('event-title').value = event.title;
-        document.getElementById('event-date').value = event.date;
-        document.getElementById('event-time').value = event.time || '';
-        document.getElementById('event-location').value = event.location || '';
-        document.getElementById('event-description').value = event.description || '';
-        document.getElementById('event-url').value = event.url || '';
-        
-        this.submitButton.textContent = 'Update Event';
-        
-        // Switch event handlers
-        this.addEventForm.removeEventListener('submit', this.handleAddEventBound);
-        this.addEventForm.addEventListener('submit', this.handleEditEventBound);
-    }
-
-    async handleEditEvent(e) {
-        e.preventDefault();
-        
-        const formData = {
-            title: document.getElementById('event-title').value,
-            date: document.getElementById('event-date').value,
-            time: document.getElementById('event-time').value,
-            location: document.getElementById('event-location').value,
-            description: document.getElementById('event-description').value,
-            url: document.getElementById('event-url').value
-        };
-        
-        try {
-            const response = await fetch(`/api/events/${this.editingEventId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-            
-            if (response.ok) {
-                await this.renderCalendar();
-                this.hideAddEventModal();
-                this.hideEventDetails();
-            } else {
-                const error = await response.json();
-                alert(error.error || 'Error updating event');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Error updating event');
-        }
-        
-        // Reset event handlers
-        this.addEventForm.removeEventListener('submit', this.handleEditEventBound);
-        this.addEventForm.addEventListener('submit', this.handleAddEventBound);
-        this.submitButton.textContent = 'Add Event';
-    }
-
-    hideEventPopup() {
-        if (this.activePopup) {
-            this.activePopup.remove();
-            this.activePopup = null;
-        }
-    }
-
-    showEventPopup(events, anchorElement) {
-        if (this.activePopup) {
-            this.hideEventPopup();
-        }
-
-        const popup = document.createElement('div');
-        popup.className = 'event-popup';
-        
-        const popupContent = events.map(event => {
-            const needsReviewBadge = event.needs_review ? '<span class="review-badge-small">Review</span>' : '';
-            
-            // Create tags HTML if event has tags
-            const tagsHtml = event.tags && event.tags.length > 0 
-                ? `<div class="event-tags">
-                    ${event.tags.map(tag => `
-                        <div class="event-tag" style="background-color: ${tag.color || '#808080'}">${tag.name}</div>
-                    `).join('')}
-                   </div>`
-                : '';
-            
-            return `
-                <div class="popup-event" data-event-id="${event.id}">
-                    <div class="popup-event-header">
-                        ${needsReviewBadge}
-                        <strong>${event.title}</strong>
-                    </div>
-                    ${event.time ? `<div class="popup-event-time">${event.time}</div>` : ''}
-                    ${event.location ? `<div class="popup-event-location">${event.location}</div>` : ''}
-                    ${tagsHtml}
-                </div>
+        if (content) {
+            content.innerHTML = `
+                <h3>${event.title}</h3>
+                <p><strong>Date:</strong> ${new Date(event.date).toLocaleDateString()}</p>
+                ${event.time ? `<p><strong>Time:</strong> ${event.time}</p>` : ''}
+                <p><strong>Description:</strong> ${event.description || 'No description'}</p>
             `;
-        }).join('');
+        }
 
-        popup.innerHTML = popupContent;
-        
-        // Position popup
-        const rect = anchorElement.getBoundingClientRect();
-        popup.style.position = 'absolute';
-        popup.style.left = `${rect.left + window.scrollX}px`;
-        popup.style.top = `${rect.bottom + window.scrollY}px`;
-        
-        // Add click handlers
-        popup.addEventListener('click', (e) => {
-            const eventElement = e.target.closest('.popup-event');
-            if (eventElement) {
-                const eventId = eventElement.dataset.eventId;
-                const event = events.find(ev => ev.id === parseInt(eventId));
-                if (event) {
-                    this.showEventDetails(event);
+        if (tags && event.tags) {
+            tags.innerHTML = event.tags.map(tag => 
+                `<span class="tag">${tag}</span>`
+            ).join('');
+        }
+
+        // Show/hide admin buttons based on admin status and event state
+        if (adminButtons) {
+            if (this.isAdmin) {
+                adminButtons.classList.remove('hidden');
+                const approveButton = adminButtons.querySelector('.approve-button');
+                const flagButton = adminButtons.querySelector('.flag-button');
+                
+                if (approveButton) {
+                    if (event.pending) {
+                        approveButton.classList.remove('hidden');
+                        approveButton.onclick = () => this.approveEvent(event.id);
+                    } else {
+                        approveButton.classList.add('hidden');
+                    }
                 }
+                
+                if (flagButton) {
+                    flagButton.classList.remove('hidden');
+                    flagButton.onclick = () => this.flagEvent(event.id);
+                }
+            } else {
+                adminButtons.classList.add('hidden');
             }
-        });
-        
-        document.body.appendChild(popup);
-        this.activePopup = popup;
-        
-        // Hide popup when clicking outside
-        document.addEventListener('click', (e) => {
-            if (this.activePopup && !this.activePopup.contains(e.target) && !anchorElement.contains(e.target)) {
-                this.hideEventPopup();
-            }
-        });
+        }
+
+        this.eventDetailsModal.classList.remove('hidden');
     }
 
     async approveEvent(eventId) {
         try {
             const response = await fetch(`/api/events/${eventId}/approve`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
-            
-            if (response.ok) {
-                await this.renderCalendar();
-                this.hideEventDetails();
-            } else {
-                console.error('Error approving event');
-            }
+
+            if (!response.ok) throw new Error('Failed to approve event');
+
+            this.showMessage('Event approved successfully');
+            this.eventDetailsModal.classList.add('hidden');
+            await this.renderCalendar(true);
+
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error approving event:', error);
+            this.showMessage('Failed to approve event', 'error');
         }
     }
 
     async flagEvent(eventId) {
         try {
             const response = await fetch(`/api/events/${eventId}/flag`, {
+<<<<<<< Updated upstream
                 method: 'POST'
             });
             
@@ -705,12 +454,167 @@ class Calendar {
                 this.hideEventDetails();
             } else {
                 console.error('Error flagging event');
+=======
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) throw new Error('Failed to flag event');
+
+            this.showMessage('Event flagged for review');
+            this.eventDetailsModal.classList.add('hidden');
+            await this.renderCalendar(true);
+
+        } catch (error) {
+            console.error('Error flagging event:', error);
+            this.showMessage('Failed to flag event', 'error');
+        }
+    }
+
+    showScraperModal() {
+        const modal = document.getElementById('scraper-modal');
+        if (modal) {
+            modal.classList.add('visible');
+        }
+    }
+
+    hideScraperModal() {
+        const modal = document.getElementById('scraper-modal');
+        if (modal) {
+            modal.classList.remove('visible');
+        }
+    }
+
+    async handleScrapeUrl() {
+        const url = document.getElementById('scraper-url').value;
+        const status = document.getElementById('scraper-status');
+        const progress = status.querySelector('.progress');
+        const statusText = status.querySelector('.status-text');
+        
+        try {
+            // Show status
+            status.classList.add('active');
+            progress.style.width = '0%';
+            statusText.textContent = 'Scraping URL...';
+            
+            // Step 1: Scrape URL
+            progress.style.width = '20%';
+            const response = await fetch('/api/scraper/scrape', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to scrape URL');
+            }
+            
+            const rawContent = await response.text();
+            document.getElementById('scrape-output').value = rawContent;
+            
+            // Step 2: AI Interpretation
+            progress.style.width = '40%';
+            statusText.textContent = 'Interpreting content...';
+            
+            const interpretResponse = await fetch('/api/scraper/interpret', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content: rawContent })
+            });
+            
+            if (!interpretResponse.ok) {
+                throw new Error('Failed to interpret content');
+            }
+            
+            const interpretedContent = await interpretResponse.json();
+            document.getElementById('interpret-output').value = JSON.stringify(interpretedContent, null, 2);
+            
+            // Step 3: Generate SQL
+            progress.style.width = '60%';
+            statusText.textContent = 'Generating SQL...';
+            
+            const sqlResponse = await fetch('/api/scraper/tosql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(interpretedContent)
+            });
+            
+            if (!sqlResponse.ok) {
+                throw new Error('Failed to generate SQL');
+            }
+            
+            const sqlContent = await sqlResponse.text();
+            document.getElementById('sql-output').value = sqlContent;
+            
+            // Complete
+            progress.style.width = '100%';
+            statusText.textContent = 'Scraping completed successfully!';
+            
+            // Enable buttons
+            document.getElementById('interpret-button').disabled = false;
+            document.getElementById('tosql-button').disabled = false;
+            document.getElementById('execute-sql-button').disabled = false;
+            
+        } catch (error) {
+            console.error('Scraping error:', error);
+            statusText.textContent = `Error: ${error.message}`;
+            progress.style.width = '100%';
+            progress.style.backgroundColor = '#dc3545';
+        }
+    }
+
+    async interpretEvents() {
+        try {
+            const scrapeOutput = document.getElementById('scrape-output');
+            const interpretOutput = document.getElementById('interpret-output');
+            
+            if (!scrapeOutput || !scrapeOutput.value) {
+                console.error('No content to interpret');
+                return;
+            }
+            
+            console.log('Sending text for interpretation:', scrapeOutput.value);
+            
+            const response = await fetch('/api/scrape/interpret', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: scrapeOutput.value
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Interpretation result:', result);
+                
+                if (result.error) {
+                    console.error('Error from server:', result.error);
+                    return;
+                }
+                
+                if (interpretOutput) {
+                    interpretOutput.value = JSON.stringify(result.events || [], null, 2);
+                }
+            } else {
+                console.error('Error interpreting events:', response.statusText);
+>>>>>>> Stashed changes
             }
         } catch (error) {
             console.error('Error:', error);
         }
     }
 
+<<<<<<< Updated upstream
     async scrapeTrident() {
         try {
             this.scrapeTridentBtn.disabled = true;
@@ -762,115 +666,294 @@ class Calendar {
         }
         if (this.overlay) {
             this.overlay.classList.add('hidden');
+=======
+    async convertToSql() {
+        try {
+            const interpretOutput = document.getElementById('interpret-output');
+            const sqlOutput = document.getElementById('sql-output');
+            
+            if (!interpretOutput || !interpretOutput.value) {
+                console.error('No events to convert to SQL');
+                return;
+            }
+            
+            const response = await fetch('/api/scrape/eventsql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    events: JSON.parse(interpretOutput.value)
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (sqlOutput) {
+                    sqlOutput.value = result.sql || '';
+                }
+                console.log('SQL conversion successful:', result);
+            } else {
+                console.error('Error converting to SQL');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    async executeSql() {
+        try {
+            const sqlOutput = document.getElementById('sql-output');
+            
+            if (!sqlOutput || !sqlOutput.value) {
+                console.error('No SQL to execute');
+                return;
+            }
+            
+            const response = await fetch('/api/scrape/executesql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sql: sqlOutput.value
+                })
+            });
+            
+            if (response.ok) {
+                console.log('SQL execution successful');
+                await this.renderCalendar();  // Refresh calendar to show new events
+            } else {
+                console.error('Error executing SQL');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    setupScraperEventListeners() {
+        const scrapeButton = document.getElementById('scrape-button');
+        const interpretButton = document.getElementById('interpret-button');
+        const tosqlButton = document.getElementById('tosql-button');
+        const executeSqlButton = document.getElementById('execute-sql-button');
+        
+        if (scrapeButton) {
+            scrapeButton.addEventListener('click', () => this.handleScrapeUrl());
+        }
+        
+        if (interpretButton) {
+            interpretButton.addEventListener('click', async () => {
+                const rawContent = document.getElementById('scrape-output').value;
+                if (!rawContent) return;
+                
+                try {
+                    const response = await fetch('/api/scraper/interpret', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ content: rawContent })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to interpret content');
+                    }
+                    
+                    const interpretedContent = await response.json();
+                    document.getElementById('interpret-output').value = JSON.stringify(interpretedContent, null, 2);
+                    
+                } catch (error) {
+                    console.error('Interpretation error:', error);
+                    this.showMessage('Failed to interpret content', 'error');
+                }
+            });
+        }
+        
+        if (tosqlButton) {
+            tosqlButton.addEventListener('click', async () => {
+                const interpretedContent = document.getElementById('interpret-output').value;
+                if (!interpretedContent) return;
+                
+                try {
+                    const response = await fetch('/api/scraper/tosql', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: interpretedContent
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to generate SQL');
+                    }
+                    
+                    const sqlContent = await response.text();
+                    document.getElementById('sql-output').value = sqlContent;
+                    
+                } catch (error) {
+                    console.error('SQL generation error:', error);
+                    this.showMessage('Failed to generate SQL', 'error');
+                }
+            });
+        }
+        
+        if (executeSqlButton) {
+            executeSqlButton.addEventListener('click', async () => {
+                const sqlContent = document.getElementById('sql-output').value;
+                if (!sqlContent) return;
+                
+                try {
+                    const response = await fetch('/api/scrape/execute', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ sql: sqlContent })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to execute SQL');
+                    }
+                    
+                    this.showMessage('Events imported successfully!');
+                    await this.renderCalendar();
+                    
+                } catch (error) {
+                    console.error('SQL execution error:', error);
+                    this.showMessage('Failed to import events', 'error');
+                }
+            });
+>>>>>>> Stashed changes
         }
     }
 
     // Modal Management
     showLoginModal() {
         if (this.loginModal) {
-            this.loginModal.classList.remove('hidden');
+            this.loginModal.classList.add('visible');
         }
     }
 
     hideLoginModal() {
         if (this.loginModal) {
-            this.loginModal.classList.add('hidden');
-            this.loginForm.reset();
+            this.loginModal.classList.remove('visible');
         }
     }
 
     showRegisterModal() {
         if (this.registerModal) {
-            this.registerModal.classList.remove('hidden');
+            this.registerModal.classList.add('visible');
         }
     }
 
     hideRegisterModal() {
         if (this.registerModal) {
-            this.registerModal.classList.add('hidden');
-            this.registerForm.reset();
+            this.registerModal.classList.remove('visible');
         }
     }
 
     showProfileModal() {
         if (this.profileModal) {
-            this.profileModal.classList.remove('hidden');
+            this.profileModal.classList.add('visible');
         }
     }
 
     hideProfileModal() {
         if (this.profileModal) {
-            this.profileModal.classList.add('hidden');
+            this.profileModal.classList.remove('visible');
         }
     }
 
     hideAllModals() {
-        const modals = [
-            this.eventDetails,
-            this.addEventModal,
-            this.adminModal,
-            this.scraperModal,
-            this.loginModal,
-            this.registerModal,
-            this.profileModal
-        ];
-
+        const modals = document.querySelectorAll('.modal');
         modals.forEach(modal => {
-            if (modal) {
-                modal.classList.add('hidden');
-            }
+            modal.classList.remove('visible');
         });
-
-        if (this.overlay) {
-            this.overlay.classList.add('hidden');
-        }
     }
 
     // Authentication Handlers
-    async handleLogin(e) {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-
+    async login(email, password) {
         try {
             const response = await fetch('/api/users/login', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                })
             });
-
-            const data = await response.json();
-
+            
             if (response.ok) {
-                // Store token and update global state
-                const token = data.token;
-                localStorage.setItem('token', token);
-                window.authToken = token;
-                window.isAuthenticated = true;
-                
-                // Update instance state
-                this.user = data.user;
-                this.isAuthenticated = true;
-                
-                // Update UI
-                this.updateAuthState();
-                this.hideLoginModal();
-                this.showMessage('Successfully logged in!');
-                
-                // Refresh calendar to show personalized content
-                this.renderCalendar();
+                const data = await response.json();
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                return true;
             } else {
-                throw new Error(data.error || 'Login failed');
+                const error = await response.json();
+                throw new Error(error.error || 'Login failed');
             }
         } catch (error) {
-            this.showMessage(error.message, 'error');
+            console.error('Login error:', error);
+            throw error;
         }
     }
 
-    async handleRegister(e) {
-        e.preventDefault();
+    async handleLogin(event) {
+        event.preventDefault();
+        
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        
+        if (!email || !password) {
+            this.showMessage('Please enter both email and password', 'error');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/users/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Store auth data
+                localStorage.setItem('token', result.token);
+                localStorage.setItem('user', JSON.stringify(result.user));
+                
+                // Update UI
+                this.isAuthenticated = true;
+                this.user = result.user;
+                this.updateAuthUI();
+                
+                // Load user preferences
+                await this.loadUserPreferences();
+                
+                // Hide login modal
+                this.hideLoginModal();
+                
+                // Refresh calendar
+                await this.renderCalendar();
+                
+                // Show success message
+                this.showMessage('Successfully logged in!');
+            } else {
+                this.showMessage(result.error || 'Login failed', 'error');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            this.showMessage('An error occurred during login', 'error');
+        }
+    }
+
+    async handleRegister(event) {
+        event.preventDefault();
         const email = document.getElementById('register-email').value;
         const username = document.getElementById('register-username').value;
         const password = document.getElementById('register-password').value;
@@ -918,7 +1001,7 @@ class Calendar {
         window.isAuthenticated = false;
         this.isAuthenticated = false;
         this.user = null;
-        this.updateAuthState();
+        this.updateAuthUI();
         this.renderCalendar();
         this.showMessage('Successfully logged out!');
     }
@@ -937,7 +1020,7 @@ class Calendar {
             this.isAuthenticated = false;
             this.user = null;
         }
-        this.updateAuthState();
+        this.updateAuthUI();
     }
 
     async loadUserProfile() {
@@ -958,7 +1041,7 @@ class Calendar {
             const data = await response.json();
             this.user = data.user;
             this.isAuthenticated = true;
-            this.updateAuthState();
+            this.updateAuthUI();
             
         } catch (error) {
             console.error('Profile load error:', error);
@@ -966,27 +1049,32 @@ class Calendar {
         }
     }
 
-    updateAuthState() {
+    updateAuthUI() {
         document.body.classList.toggle('authenticated', this.isAuthenticated);
         
         // Update button visibility
-        if (this.loginBtn) {
-            this.loginBtn.classList.toggle('hidden', this.isAuthenticated);
+        if (this.loginButton) {
+            this.loginButton.classList.toggle('hidden', this.isAuthenticated);
         }
-        if (this.registerBtn) {
-            this.registerBtn.classList.toggle('hidden', this.isAuthenticated);
+        if (this.registerButton) {
+            this.registerButton.classList.toggle('hidden', this.isAuthenticated);
         }
-        if (this.profileBtn) {
-            this.profileBtn.classList.toggle('hidden', !this.isAuthenticated);
+        if (this.profileButton) {
+            this.profileButton.classList.toggle('hidden', !this.isAuthenticated);
+        }
+        if (this.preferencesButton) {
+            this.preferencesButton.classList.toggle('hidden', !this.isAuthenticated);
         }
         
         // Update other auth-dependent elements
-        document.querySelectorAll('.auth-required').forEach(el => {
-            el.style.display = this.isAuthenticated ? 'block' : 'none';
+        const authHideElements = document.querySelectorAll('.auth-hide');
+        authHideElements.forEach(element => {
+            element.classList.toggle('hidden', this.isAuthenticated);
         });
         
-        document.querySelectorAll('.auth-hide').forEach(el => {
-            el.style.display = this.isAuthenticated ? 'none' : 'block';
+        const authRequiredElements = document.querySelectorAll('.auth-required');
+        authRequiredElements.forEach(element => {
+            element.classList.toggle('hidden', !this.isAuthenticated);
         });
     }
 
@@ -1032,10 +1120,50 @@ class Calendar {
         }
     }
 
-    showMessage(message, type = 'success') {
-        // Implement message display logic
-        console.log(`${type}: ${message}`);
-        // You could add a toast or notification system here
+    async loadUserPreferences() {
+        try {
+            const response = await fetch('/api/preferences');
+            if (response.ok) {
+                const preferences = await response.json();
+                this.userPreferences = preferences;
+                
+                // Update UI with preferences
+                const colorPicker = document.getElementById('event-color');
+                if (colorPicker) {
+                    colorPicker.value = preferences.eventColor || '#4CAF50';
+                }
+                
+                const reminderSelect = document.getElementById('reminder-time');
+                if (reminderSelect) {
+                    reminderSelect.value = preferences.reminderTime || '30';
+                }
+                
+                const viewSelect = document.getElementById('calendar-view');
+                if (viewSelect) {
+                    viewSelect.value = preferences.defaultView || 'month';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading preferences:', error);
+            this.showMessage('Failed to load preferences', 'error');
+        }
+    }
+
+    togglePreferences() {
+        if (this.preferencesContainer) {
+            const isHidden = !this.preferencesContainer.classList.contains('visible');
+            if (isHidden) {
+                // Hide any other visible modals first
+                const modals = document.querySelectorAll('.modal.visible');
+                modals.forEach(modal => modal.classList.remove('visible'));
+                
+                // Show preferences
+                this.preferencesContainer.classList.add('visible');
+                this.loadUserPreferences();
+            } else {
+                this.preferencesContainer.classList.remove('visible');
+            }
+        }
     }
 
     async handleExecuteSql() {
@@ -1066,9 +1194,64 @@ class Calendar {
             alert('Failed to execute SQL');
         }
     }
+<<<<<<< Updated upstream
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     const calendar = new Calendar();
     window.calendar = calendar;
 });
+=======
+
+    previousMonth() {
+        if (this.currentMonth === 1) {
+            this.currentMonth = 12;
+            this.currentYear--;
+        } else {
+            this.currentMonth--;
+        }
+        this.renderCalendar();
+    }
+
+    nextMonth() {
+        if (this.currentMonth === 12) {
+            this.currentMonth = 1;
+            this.currentYear++;
+        } else {
+            this.currentMonth++;
+        }
+        this.renderCalendar();
+    }
+
+    updateCurrentMonthDisplay() {
+        const months = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        const monthElement = document.getElementById('currentMonth');
+        if (monthElement) {
+            monthElement.textContent = `${months[this.currentMonth - 1]} ${this.currentYear}`;
+        }
+    }
+
+    changeMonth(delta) {
+        this.currentDate.setMonth(this.currentDate.getMonth() + delta);
+        this.renderCalendar();
+    }
+
+    showMessage(message, type = 'success') {
+        const container = document.getElementById('message-container');
+        if (!container) return;
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.textContent = message;
+        
+        container.appendChild(messageDiv);
+        
+        setTimeout(() => {
+            messageDiv.remove();
+        }, 3000);
+    }
+}
+>>>>>>> Stashed changes

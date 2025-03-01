@@ -7,7 +7,7 @@ import jwt
 import os
 from functools import wraps
 
-user_bp = Blueprint('users', __name__)
+user_bp = Blueprint('users', __name__, url_prefix='/users')
 
 # JWT secret key - in production, this should be an environment variable
 JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key')
@@ -56,33 +56,27 @@ def validate_password(password):
         return False
     return True
 
-@user_bp.route('/api/users/register', methods=['POST'])
+@user_bp.route('/register', methods=['POST'])
 def register():
     print("Received registration request")
     data = request.get_json()
-    print("Request data:", data)
     
-    # Validate required fields
-    required_fields = ['email', 'username', 'password']
-    for field in required_fields:
-        if field not in data:
-            print(f"Missing required field: {field}")
-            return jsonify({'error': f'{field} is required'}), 400
-            
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+        
+    required_fields = ['email', 'password', 'username']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'All fields are required'}), 400
+    
     # Validate email format
     if not validate_email(data['email']):
-        print(f"Invalid email format: {data['email']}")
         return jsonify({'error': 'Invalid email format'}), 400
         
     # Validate password strength
     if not validate_password(data['password']):
-        print("Password validation failed")
-        return jsonify({'error': 'Password must be at least 8 characters and contain uppercase, lowercase, and numbers'}), 400
-        
-    # Validate username length
-    if len(data['username']) < 3:
-        print(f"Username too short: {data['username']}")
-        return jsonify({'error': 'Username must be at least 3 characters long'}), 400
+        return jsonify({
+            'error': 'Password must be at least 8 characters long and contain at least one uppercase letter'
+        }), 400
     
     conn = get_db()
     cursor = conn.cursor()
@@ -90,28 +84,36 @@ def register():
     try:
         # Check if email already exists
         cursor.execute('SELECT id FROM users WHERE email = ?', (data['email'],))
-        if cursor.fetchone():
-            return jsonify({'error': 'Email already registered'}), 400
+        if cursor.fetchone() is not None:
+            return jsonify({'error': 'Email already registered'}), 409
             
         # Check if username already exists
         cursor.execute('SELECT id FROM users WHERE username = ?', (data['username'],))
-        if cursor.fetchone():
-            return jsonify({'error': 'Username already taken'}), 400
+        if cursor.fetchone() is not None:
+            return jsonify({'error': 'Username already taken'}), 409
         
-        password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
-        cursor.execute('''
-            INSERT INTO users (email, username, password_hash)
-            VALUES (?, ?, ?)
-        ''', (data['email'], data['username'], password_hash))
+        # Hash password
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(data['password'].encode('utf-8'), salt)
         
+        # Insert new user
+        cursor.execute(
+            'INSERT INTO users (email, password_hash, username, created_at) VALUES (?, ?, ?, ?)',
+            (data['email'], hashed.decode('utf-8'), data['username'], datetime.utcnow())
+        )
         conn.commit()
+        
+        # Get the new user's ID
         user_id = cursor.lastrowid
         
+        # Generate JWT token
         token = jwt.encode(
             {'user_id': user_id},
             JWT_SECRET,
             algorithm='HS256'
         )
+        
+        print(f"Successfully registered user: {data['email']}")
         
         return jsonify({
             'token': token,
@@ -128,7 +130,7 @@ def register():
     finally:
         conn.close()
 
-@user_bp.route('/api/users/login', methods=['POST'])
+@user_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     print("Login attempt with data:", data)  # Debug log
@@ -177,7 +179,7 @@ def login():
     finally:
         conn.close()
 
-@user_bp.route('/api/users/profile', methods=['GET'])
+@user_bp.route('/profile', methods=['GET'])
 @token_required
 def get_profile(user_id):
     """Get user profile."""
@@ -186,77 +188,81 @@ def get_profile(user_id):
     
     try:
         # Get user info
-        cursor.execute('''
-            SELECT id, email, username, created_at, last_login
-            FROM users WHERE id = ?
-        ''', (user_id,))
-        user = dict(cursor.fetchone())
+        cursor.execute('SELECT id, email, username, created_at FROM users WHERE id = ?', (user_id,))
+        user = cursor.fetchone()
         
-        # Get tag preferences
-        cursor.execute('''
-            SELECT t.name, t.category, utp.weight
-            FROM user_tag_preferences utp
-            JOIN tags t ON utp.tag_id = t.id
-            WHERE utp.user_id = ?
-        ''', (user_id,))
-        preferences = [dict(row) for row in cursor.fetchall()]
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        # Get user's tag preferences
+        cursor.execute('SELECT tag_id FROM user_tag_preferences WHERE user_id = ?', (user_id,))
+        tag_preferences = [row['tag_id'] for row in cursor.fetchall()]
         
-        # Get interaction counts
+        # Get user's event interactions
         cursor.execute('''
-            SELECT interaction_type, COUNT(*) as count
-            FROM user_event_interactions
-            WHERE user_id = ?
-            GROUP BY interaction_type
+            SELECT ei.event_id, ei.interaction_type, ei.created_at,
+                   e.title, e.date, e.time
+            FROM event_interactions ei
+            JOIN events e ON ei.event_id = e.id
+            WHERE ei.user_id = ?
+            ORDER BY ei.created_at DESC
+            LIMIT 10
         ''', (user_id,))
-        interactions = {row['interaction_type']: row['count'] for row in cursor.fetchall()}
+        interactions = []
+        for row in cursor.fetchall():
+            interactions.append({
+                'event_id': row['event_id'],
+                'type': row['interaction_type'],
+                'date': row['created_at'],
+                'event_title': row['title'],
+                'event_date': row['date'],
+                'event_time': row['time']
+            })
         
         return jsonify({
-            'user': user,
-            'preferences': preferences,
-            'interactions': interactions
+            'user': dict(user),
+            'tag_preferences': tag_preferences,
+            'recent_interactions': interactions
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 400
     finally:
         conn.close()
 
-@user_bp.route('/api/users/preferences', methods=['POST'])
+@user_bp.route('/preferences', methods=['POST'])
 @token_required
 def update_preferences(user_id):
     """Update user tag preferences."""
-    data = request.json
+    data = request.get_json()
     
-    if not isinstance(data.get('preferences'), list):
-        return jsonify({'error': 'Preferences must be a list'}), 400
+    if not data or 'tags' not in data:
+        return jsonify({'error': 'No tag preferences provided'}), 400
         
     conn = get_db()
     cursor = conn.cursor()
     
     try:
-        cursor.execute('BEGIN TRANSACTION')
+        # First delete all existing preferences
+        cursor.execute('DELETE FROM user_tag_preferences WHERE user_id = ?', (user_id,))
         
-        for pref in data['preferences']:
-            if not all(k in pref for k in ('tag_id', 'weight')):
-                cursor.execute('ROLLBACK')
-                return jsonify({'error': 'Each preference must have tag_id and weight'}), 400
-                
-            cursor.execute('''
-                INSERT OR REPLACE INTO user_tag_preferences (user_id, tag_id, weight, updated_at)
-                VALUES (?, ?, ?, ?)
-            ''', (user_id, pref['tag_id'], pref['weight'], datetime.utcnow()))
+        # Then insert new preferences
+        for tag_id in data['tags']:
+            cursor.execute(
+                'INSERT INTO user_tag_preferences (user_id, tag_id) VALUES (?, ?)',
+                (user_id, tag_id)
+            )
             
-        cursor.execute('COMMIT')
-        
+        conn.commit()
         return jsonify({'message': 'Preferences updated successfully'})
         
     except Exception as e:
-        cursor.execute('ROLLBACK')
-        return jsonify({'error': str(e)}), 500
+        conn.rollback()
+        return jsonify({'error': str(e)}), 400
     finally:
         conn.close()
 
-@user_bp.route('/api/users/events/<int:event_id>/interact', methods=['POST'])
+@user_bp.route('/events/<int:event_id>/interact', methods=['POST'])
 @token_required
 def interact_with_event(user_id, event_id):
     """Record a user's interaction with an event."""

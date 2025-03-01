@@ -125,161 +125,195 @@ def scrape() -> Dict[str, Any]:
         })
 
 
-@scraper_bp.route('/aiinterpret', methods=['POST'])
+@scraper_bp.route('/scrape/interpret', methods=['POST'])
 def aiinterpret() -> Dict[str, Any]:
     """Interpret scraped text using AI to extract event information."""
     try:
         data = request.get_json()
         text = data.get('text')
         
+        logger.info(f"Received text for interpretation: {text[:100]}...")
+        
         if not text:
-            return jsonify({'error': 'Text is required', 'text': None})
+            return jsonify({'error': 'Text is required', 'events': []})
 
-        # Gemini API configuration
-        api_key = "AIzaSyAAbOmW8AmDJiP6CEIGNGcQbONKm9pc1vY"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        # Extract events using regular expressions and text analysis
+        events = []
         
-        # Define the prompt directly
-        prompt = '''Extract events from the provided text and output VALID JSON that exactly matches this format:
-{
-    "events": [
-        {
-            "title": "Event Title",
-            "date": "2025-02-17",  # REQUIRED! Format: YYYY-MM-DD. If no date found, skip the event
-            "time": "14:00",       # Optional, format: HH:MM in 24-hour time
-            "location": "Location", # Optional
-            "description": "Description",  # Optional
-            "url": null,           # Optional
-            "status": "pending"    # Always "pending"
+        # Look for event patterns in the text
+        # Common date formats: YYYY-MM-DD, MM/DD/YYYY, Month DD, YYYY
+        date_patterns = [
+            (r'(\d{4}-\d{2}-\d{2})', lambda x: x),  # YYYY-MM-DD (keep as is)
+            (r'(\d{1,2})/(\d{1,2})/(\d{4})', lambda m: f"{m[2]}-{m[0]:02d}-{m[1]:02d}"),  # MM/DD/YYYY to YYYY-MM-DD
+            (r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})', 
+             lambda m: f"{m[2]}-{month_to_num[m[0]]}-{int(m[1]):02d}")  # Month DD, YYYY to YYYY-MM-DD
+        ]
+        
+        # Month name to number mapping
+        month_to_num = {
+            'January': '01', 'February': '02', 'March': '03', 'April': '04',
+            'May': '05', 'June': '06', 'July': '07', 'August': '08',
+            'September': '09', 'October': '10', 'November': '11', 'December': '12'
         }
-    ]
-}
-
-IMPORTANT:
-1. The date field is REQUIRED. Skip any events without a clear date.
-2. Format dates as YYYY-MM-DD (e.g., 2025-02-17)
-3. Format times as HH:MM in 24-hour format (e.g., 14:00)
-4. Remove any duplicate events
-5. Use null for missing optional values
-6. Ensure proper JSON formatting:
-   - Double quotes around property names and string values
-   - No trailing commas
-   - No comments in the actual output'''
         
-        # Make the API request
-        response = requests.post(
-            url,
-            headers={'Content-Type': 'application/json'},
-            json={
-                "contents": [{
-                    "parts": [{
-                        "text": f"{prompt}\n\nText to analyze:\n{text}"
-                    }]
-                }]
+        # Time patterns: HH:MM AM/PM or military time
+        time_pattern = r'(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?'
+        
+        # Split text into potential event blocks
+        blocks = text.split('\n\n')
+        for block in blocks:
+            # Skip empty blocks
+            if not block.strip():
+                continue
+            
+            # Try to find a date
+            date = None
+            for pattern, formatter in date_patterns:
+                matches = re.search(pattern, block)
+                if matches:
+                    try:
+                        if len(matches.groups()) == 1:
+                            date = formatter(matches.group(1))
+                        else:
+                            date = formatter(matches.groups())
+                        break
+                    except Exception as e:
+                        logger.error(f"Error formatting date: {e}")
+                        continue
+            
+            # Skip if no date found
+            if not date:
+                logger.debug(f"No date found in block: {block[:50]}...")
+                continue
+            
+            # Find time
+            time_match = re.search(time_pattern, block)
+            time = None
+            if time_match:
+                hour, minute, meridian = time_match.groups()
+                hour = int(hour)
+                if meridian and meridian.lower() == 'pm' and hour < 12:
+                    hour += 12
+                elif meridian and meridian.lower() == 'am' and hour == 12:
+                    hour = 0
+                time = f"{hour:02d}:{minute}"
+            
+            # Get title (first non-empty line)
+            lines = block.split('\n')
+            title = next((line.strip() for line in lines if line.strip()), 'Untitled Event')
+            
+            # Get description (remaining text)
+            description = '\n'.join(line.strip() for line in lines[1:] if line.strip())
+            
+            # Create event object
+            event = {
+                'title': title,
+                'date': date,
+                'time': time,
+                'location': 'Trident Cafe',  # Default for Trident events
+                'description': description,
+                'url': None,
+                'source': 'trident',
+                'source_id': None,
+                'needs_review': True
             }
-        )
+            
+            logger.info(f"Found event: {event}")
+            events.append(event)
         
-        if response.status_code != 200:
-            return jsonify({'error': f'Gemini API error: {response.status_code}', 'text': None})
-            
-        # Return exactly what the AI gave us
-        generated_text = response.json()['candidates'][0]['content']['parts'][0]['text']
-        return jsonify({'text': generated_text, 'error': None})
-            
+        logger.info(f"Found {len(events)} events")
+        return jsonify({
+            'events': events,
+            'error': None
+        })
+        
     except Exception as e:
-        return jsonify({'error': str(e), 'text': None})
+        logger.error(f"Error in AI interpretation: {str(e)}")
+        return jsonify({'error': str(e), 'events': []})
 
-@scraper_bp.route('/eventsql', methods=['POST'])
+
+@scraper_bp.route('/scrape/eventsql', methods=['POST'])
 def eventsql() -> Dict[str, Any]:
     """Convert interpreted event information to SQL commands."""
     try:
         data = request.get_json()
-        text = data.get('text', '')
+        events = data.get('events', [])
         
-        if not text or not isinstance(text, str):
-            return jsonify({'error': 'Text is required and must be a string', 'sql': None})
-
-        # Try to extract valid events even from malformed JSON
-        events = []
-        try:
-            # First try parsing as-is
-            data = json.loads(text)
-            if isinstance(data, dict) and 'events' in data:
-                events = data['events']
-        except json.JSONDecodeError:
-            # If that fails, try to extract individual event objects
-            import re
-            # Find all JSON-like objects
-            event_pattern = r'{[^{}]*"title"[^{}]*}'
-            matches = re.finditer(event_pattern, text)
-            for match in matches:
-                try:
-                    event = json.loads(match.group())
-                    if isinstance(event, dict) and 'title' in event:
-                        events.append(event)
-                except:
-                    continue
-
+        logger.info(f"Converting {len(events)} events to SQL")
+        
         if not events:
-            return jsonify({'error': 'No valid events found in the text', 'sql': None})
+            return jsonify({'error': 'No events provided', 'sql': None})
 
         # Generate SQL for each event
         sql_commands = []
         for event in events:
             if not isinstance(event, dict):
+                logger.warning(f"Skipping non-dict event: {event}")
                 continue
                 
             # Skip events without required fields
             if not event.get('date'):
+                logger.warning(f"Skipping event without date: {event}")
                 continue
 
             try:
                 # Clean and escape values - ensure all strings are properly quoted
-                title = f"'{event.get('title', 'Untitled Event').replace('\'', '\'\'')}'"
-                date = f"'{event.get('date')}'"  # We know this exists because we checked above
-                time = f"'{event.get('time')}'" if event.get('time') else 'NULL'
-                location = f"'{event.get('location', '').replace('\'', '\'\'')}'" if event.get('location') else 'NULL'
-                description = f"'{event.get('description', '').replace('\'', '\'\'')}'" if event.get('description') else 'NULL'
-                url = f"'{event.get('url', '').replace('\'', '\'\'')}'" if event.get('url') else 'NULL'
-                needs_review = '0'  # Set to not need review
-                source = "'scraper'"
-                source_id = 'NULL'
+                title = "'{}'".format(event.get('title', 'Untitled Event').replace("'", "''"))
+                date = "'{}'".format(event.get('date'))  # We know this exists because we checked above
+                time = "'{}'".format(event.get('time')) if event.get('time') else 'NULL'
+                location = "'{}'".format(event.get('location', '').replace("'", "''")) if event.get('location') else 'NULL'
+                description = "'{}'".format(event.get('description', '').replace("'", "''")) if event.get('description') else 'NULL'
+                url = "'{}'".format(event.get('url', '').replace("'", "''")) if event.get('url') else 'NULL'
+                needs_review = '1'  # Set to need review by default
+                source = "'{}'".format(event.get('source', '').replace("'", "''"))
+                source_id = "'{}'".format(event.get('source_id', '').replace("'", "''")) if event.get('source_id') else 'NULL'
                 
                 # Build the SQL command with all values properly quoted
-                sql = f"""INSERT INTO events (title, date, time, location, description, url, needs_review, source, source_id) VALUES ({title}, {date}, {time}, {location}, {description}, {url}, {needs_review}, {source}, {source_id});"""
+                sql = """INSERT INTO events (title, date, time, location, description, url, needs_review, source, source_id) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {});""".format(title, date, time, location, description, url, needs_review, source, source_id)
+                logger.info(f"Generated SQL: {sql}")
                 sql_commands.append(sql)
-            except:
-                # Skip any events that cause errors
+            except Exception as e:
+                logger.error(f"Error generating SQL for event {event}: {str(e)}")
                 continue
             
         if not sql_commands:
             return jsonify({'error': 'No valid events could be converted to SQL', 'sql': None})
             
-        # Join commands and return
+        # Join all commands with newlines
         final_sql = '\n'.join(sql_commands)
-        print(f"Generated SQL: {final_sql}")  # Debug log
-        return jsonify({'sql': final_sql, 'error': None})
-            
+        logger.info(f"Final SQL commands: {final_sql}")
+        
+        return jsonify({
+            'sql': final_sql,
+            'error': None
+        })
+        
     except Exception as e:
-        import traceback
-        print("Error in eventsql:", str(e))
-        print("Traceback:", traceback.format_exc())
+        logger.error(f"Error in SQL generation: {str(e)}")
         return jsonify({'error': str(e), 'sql': None})
 
 
-@scraper_bp.route('/executesql', methods=['POST'])
+@scraper_bp.route('/scrape/executesql', methods=['POST'])
 def executesql() -> Dict[str, Any]:
     """Execute generated SQL commands on the events database."""
     try:
         data = request.get_json()
-        sql = data.get('sql', '')
+        sql = data.get('sql')
+        
+        logger.info("Executing SQL commands")
+        
+        if not sql:
+            return jsonify({'error': 'SQL is required', 'success': False})
         
         # Get database path and ensure it exists
         db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
+        if not os.path.exists(os.path.dirname(db_path)):
+            os.makedirs(os.path.dirname(db_path))
         if not os.path.exists(db_path):
+            logger.info("Database does not exist, initializing...")
             init_db()
         
-        print(f"Using database at: {db_path}")  # Debug log
+        logger.info(f"Using database at: {db_path}")
         
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -289,33 +323,44 @@ def executesql() -> Dict[str, Any]:
         errors = []
         
         try:
-            # Execute the SQL directly, just like sqlite3 command line
+            # Execute the SQL directly
+            logger.info(f"Executing SQL: {sql}")
             cursor.executescript(sql)
             conn.commit()
-            success_count = 1  # If we got here, it worked
+            
+            # Check if any rows were affected
+            cursor.execute("SELECT changes()")
+            changes = cursor.fetchone()[0]
+            logger.info(f"SQL execution affected {changes} rows")
+            
+            success_count = changes
         except sqlite3.Error as e:
-            errors.append(str(e))
+            error_msg = str(e)
+            logger.error(f"SQL Error: {error_msg}")
+            errors.append(error_msg)
             
         conn.close()
             
         if success_count > 0:
+            logger.info("SQL execution successful")
             return jsonify({
                 'success': True,
-                'message': 'Events added successfully',
-                'error': None
+                'message': f'Successfully added {success_count} events',
+                'errors': errors if errors else None
             })
         else:
+            logger.warning("SQL execution completed but no rows were affected")
             return jsonify({
                 'success': False,
-                'message': 'Failed to add events',
-                'error': '; '.join(errors)
+                'message': 'No events were added',
+                'errors': errors if errors else ['No rows were affected']
             })
-        
+            
     except Exception as e:
-        print(f"Error in executesql: {str(e)}")
+        logger.error(f"Error in SQL execution: {str(e)}")
         return jsonify({
             'success': False,
-            'message': 'Failed to execute SQL',
+            'message': 'Error executing SQL',
             'error': str(e)
         })
 
